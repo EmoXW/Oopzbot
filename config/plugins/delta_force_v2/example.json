@@ -7,5 +7,6 @@
   "request_retries": 2,
   "login_timeout_sec": 180,
   "login_poll_interval_sec": 3,
-  "proxy": "direct"
+  "proxy": "direct",
+  "login_page_base_url": ""
 }

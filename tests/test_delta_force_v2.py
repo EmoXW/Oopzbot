@@ -54,7 +54,7 @@ class AsyncTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_binding_failure_does_not_save_session(self):
         plugin: Any = DeltaForceV2Plugin()
-        plugin.config = {"client_id": "c"}
+        plugin.config = {"client_id": "c", "login_page_base_url": "http://localhost:10000"}
         plugin.api = SimpleNamespace(request=AsyncMock(side_effect=[
             {"frameworkToken": "private", "qr_image": base64.b64encode(b"\x89PNG\r\n\x1a\n").decode()},
             {"code": 0, "frameworkToken": "final"},
@@ -63,7 +63,7 @@ class AsyncTests(unittest.IsolatedAsyncioTestCase):
         plugin.store = SimpleNamespace(put=AsyncMock())
         sender = SimpleNamespace(
             upload_and_send_private_image=AsyncMock(return_value={"id": "message"}),
-            send_private_message=AsyncMock(),
+            send_private_message=AsyncMock(return_value={"status": True}),
         )
         with patch("plugins.delta_force_v2.asyncio.sleep", new_callable=AsyncMock):
             await plugin._login("user", "qq", SimpleNamespace(sender=sender))
@@ -83,19 +83,18 @@ class AsyncTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_private_failure_never_binds_or_sends_public_qr(self):
         plugin: Any = DeltaForceV2Plugin()
-        plugin.config = {"client_id": "c"}
+        plugin.config = {"client_id": "c", "login_page_base_url": "http://localhost:10000"}
         plugin.api = SimpleNamespace(request=AsyncMock(return_value={
             "frameworkToken": "private", "qr_image": base64.b64encode(b"\x89PNG\r\n\x1a\n").decode(),
         }))
         sender = SimpleNamespace(
             upload_and_send_private_image=AsyncMock(return_value={"error": "denied"}),
-            send_private_message=AsyncMock(), send_message=AsyncMock(),
+            send_private_message=AsyncMock(return_value={"error": "denied"}), send_message=AsyncMock(),
         )
         await plugin._login("user", "qq", SimpleNamespace(sender=sender))
         self.assertEqual(plugin.api.request.await_count, 1)
         sender.send_message.assert_not_called()
-        filename = sender.upload_and_send_private_image.call_args.args[1]
-        self.assertFalse(Path(filename).exists())
+        sender.upload_and_send_private_image.assert_not_called()
 
     async def test_unload_cancels_tasks(self):
         plugin: Any = DeltaForceV2Plugin()

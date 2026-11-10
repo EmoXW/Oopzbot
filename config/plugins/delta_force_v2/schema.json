@@ -32,6 +32,14 @@
       "example": "https://delta-test-api.shallow.ink"
     },
     {
+      "name": "login_page_base_url",
+      "type": "string",
+      "required": false,
+      "description": "可访问的机器人网页基础地址，留空使用播放器 URL",
+      "default": "",
+      "example": ""
+    },
+    {
       "name": "request_timeout_sec",
       "type": "integer",
       "required": false,
