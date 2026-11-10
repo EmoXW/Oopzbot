@@ -19,6 +19,7 @@ config/.private_key.py.*.tmp
 config/.private_key.py.*.bak
 .env
 .env.local
+upload/
 nginx/ssl/*.pem
 
 # Runtime data (mounted at runtime)

@@ -58,7 +58,7 @@ plugins/
 
 ```bash
 python tools/export_plugin_config_assets.py
-python tools/export_plugin_config_assets.py delta_force
+python tools/export_plugin_config_assets.py delta_force_v2
 ```
 
 ## 共享基类
@@ -92,7 +92,7 @@ python tools/create_plugin_scaffold.py demo_plugin --description "示例插件" 
 
 - `plugins/lol_ban/__init__.py`
 - `plugins/lol_fa8/__init__.py`
-- `plugins/delta_force/__init__.py`
+- `plugins/delta_force_v2/__init__.py`
 
 ## 管理员命令
 

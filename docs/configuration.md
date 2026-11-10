@@ -142,37 +142,12 @@ HTTP 返回 401/428 时仍应检查凭据或在后台重新登录。
 | `password` | FA8 登录密码 |
 | `default_area` | 默认大区 ID（`1`=艾欧尼亚） |
 
-### 三角洲插件 (`config/plugins/delta_force/config.json`)
+### 三角洲插件 (`config/plugins/delta_force_v2/config.json`)
 
-| 配置项 | 说明 |
-|--------|------|
-| `enabled` | 是否启用（默认 `true`，代码当前主要依赖是否存在配置与凭据） |
-| `api_key` | 三角洲后端 API Key（必填） |
-| `client_id` | 三角洲后端 client ID（必填） |
-| `api_mode` | API 地址选择模式，默认 `auto` |
-| `base_urls` | 后端地址列表，`auto` 模式下按顺序故障切换 |
-| `login_timeout_sec` | 二维码登录总超时（秒） |
-| `login_poll_interval_sec` | 二维码状态轮询间隔（秒） |
-| `login_delivery_mode` | 二维码投递方式：`private_message`（私信）或 `temp_channel`（临时频道） |
-| `login_success_notice_delay_sec` | 临时频道模式下，登录结束提示保留多久后自动删频道（秒，默认 `10`） |
-| `request_timeout_sec` | 单次 HTTP 请求超时（秒） |
-| `request_retries` | 单个后端地址最大重试次数 |
-| `daily_keyword_push_check_interval_sec` | 每日密码定时推送检查间隔（秒，默认 `60`，最小 `30`） |
-| `daily_keyword_push_time` | 每日密码定时推送时间（`HH:MM`，默认 `08:00`） |
-| `place_push_interval_sec` | 特勤处制造完成推送轮询间隔（秒，默认 `60`，最小 `15`） |
-| `render_timeout_sec` | 海报渲染超时（秒） |
-| `render_width` | 海报截图宽度 |
-| `render_scale` | 预留渲染缩放参数 |
-| `temp_dir` | 三角洲插件运行时目录（用于二维码和临时渲染文件） |
-
-说明：
-
-- `login_delivery_mode` 默认为 `private_message`。
-- 设为 `temp_channel` 时，插件会创建仅登录用户可见的临时文字频道发送二维码；登录成功、超时、过期或其他终止场景提示后会自动删频道。
-- 若所选投递方式失败，插件会回退到当前频道发送提示或二维码，避免登录流程直接中断。
-- `temp_dir/qrs` 会在插件加载时自动清理过期二维码文件。
-- 每日密码定时推送会按 `daily_keyword_push_time` 在所有已订阅频道每日推送一次。
-- 特勤处制造完成推送会按 `place_push_interval_sec` 周期轮询当前已订阅频道，并在检测到生产任务完成时推送到原频道。
+使用新版后端。参考同目录 `example.json`，填写 `enabled: true`、`api_key` 和平台个人用户 ID `client_id`。
+`base_url` 默认 `https://delta-test-api.shallow.ink`，`proxy` 默认 `direct`。
+请求超时与扫码轮询参数见同目录 `schema.json`。二维码仅私信发送。
+旧版插件已移除，不再支持其图片渲染和自动推送配置。详细功能见 `plugins/delta_force_v2/README.md`。
 
 ### 聊天自动回复 (`CHAT_CONFIG`)
 
@@ -370,7 +345,7 @@ Compose 的宿主配置文件位于 `config/runtime.py` 与
 
 ## 插件配置
 
-插件配置位于 `config/plugins/` 目录。现在每个插件一个子目录，例如 `config/plugins/delta_force/config.json`、`config/plugins/delta_force/example.json`、`config/plugins/delta_force/schema.json`。复制 `example.json` 为 `config.json` 后修改即可。
+插件配置位于 `config/plugins/` 目录。现在每个插件一个子目录，例如 `config/plugins/delta_force_v2/config.json`、`config/plugins/delta_force_v2/example.json`、`config/plugins/delta_force_v2/schema.json`。复制 `example.json` 为 `config.json` 后修改即可。
 
 ## private_key.py
 

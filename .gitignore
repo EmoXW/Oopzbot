@@ -72,3 +72,6 @@ Thumbs.db
 .DS_Store
 delta-force-plugin-main
 docs_local/
+
+# Server upload bundle contains local credentials and runtime data.
+/upload/

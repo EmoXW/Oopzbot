@@ -1,0 +1,70 @@
+{
+  "plugin_name": "delta_force_v2",
+  "fields": [
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "example": false
+    },
+    {
+      "name": "api_key",
+      "type": "string",
+      "required": false,
+      "description": "新后端 API 密钥",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "client_id",
+      "type": "string",
+      "required": false,
+      "description": "新后端平台个人用户 ID",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "base_url",
+      "type": "string",
+      "required": false,
+      "default": "https://delta-test-api.shallow.ink",
+      "example": "https://delta-test-api.shallow.ink"
+    },
+    {
+      "name": "request_timeout_sec",
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "example": 30
+    },
+    {
+      "name": "request_retries",
+      "type": "integer",
+      "required": false,
+      "default": 2,
+      "example": 2
+    },
+    {
+      "name": "login_timeout_sec",
+      "type": "integer",
+      "required": false,
+      "default": 180,
+      "example": 180
+    },
+    {
+      "name": "login_poll_interval_sec",
+      "type": "integer",
+      "required": false,
+      "default": 3,
+      "example": 3
+    },
+    {
+      "name": "proxy",
+      "type": "string",
+      "required": false,
+      "default": "direct",
+      "example": "direct"
+    }
+  ]
+}

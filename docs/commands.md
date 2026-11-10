@@ -31,29 +31,14 @@
 | `@bot apex 地图` / `@bot apex 合成` / `@bot apex 猎杀者` | 查询地图轮换 / 复制器合成 / 猎杀者门槛 |
 | `@bot apex 帮助` | 查看 Apex 插件帮助 |
 | `@bot arc <物品关键词或ID>` | 查询 ARC Raiders 物品信息与掉率 |
-| `@bot 三角洲帮助` | 查看三角洲插件帮助；对应 `/df help` |
-| `@bot 三角洲登录 [qq|微信]` | 发起三角洲二维码登录；二维码投递方式由 `login_delivery_mode` 配置决定；对应 `/df login [qq|wechat]` |
-| `@bot 三角洲角色绑定` | 绑定三角洲游戏角色；对应 `/df bind-character` |
-| `@bot 三角洲账号` | 查看已绑定的三角洲账号列表；对应 `/df accounts` |
-| `@bot 三角洲账号切换 <序号>` | 切换当前激活的三角洲账号；对应 `/df switch <序号>` |
-| `@bot 三角洲信息` | 查看三角洲个人信息；对应 `/df info` |
-| `@bot 三角洲uid` | 查看三角洲角色 UID；对应 `/df uid` |
-| `@bot 三角洲每日密码` / `@bot 三角洲今日密码` | 查看三角洲每日密码；对应 `/df daily-keyword` 或 `/df password` |
-| `@bot 三角洲开启每日密码推送` / `@bot 三角洲关闭每日密码推送` | 开启或关闭当前频道的每日密码定时推送；对应 `/df daily-keyword-push on/off` |
-| `@bot 三角洲特勤处状态` | 查看三角洲特勤处当前生产状态；对应 `/df place-status` |
-| `@bot 三角洲开启特勤处推送` / `@bot 三角洲关闭特勤处推送` | 开启或关闭当前频道的特勤处制造完成推送；对应 `/df place-push on/off` |
-| `@bot 三角洲藏品 [类型]` / `@bot 三角洲资产 [类型]` | 查看三角洲藏品/非货币资产汇总；对应 `/df collection [类型]` 或 `/df assets [类型]` |
-| `@bot 三角洲物品 <关键词或ID>` / `@bot 三角洲物品搜索 <关键词或ID>` | 搜索三角洲物品信息；对应 `/df object-search <关键词或ID>` |
-| `@bot 三角洲价格历史 <关键词或ID>` / `@bot 三角洲历史价格 <关键词或ID>` | 查看物品价格历史；对应 `/df price-history <关键词或ID>` |
-| `@bot 三角洲货币` / `@bot 三角洲余额` | 查看三角洲货币信息；对应 `/df money` 或 `/df balance` |
-| `@bot 三角洲封号记录` / `@bot 三角洲违规记录` | 查看三角洲封号/违规记录；对应 `/df ban-history` 或 `/df banhistory` |
-| `@bot 三角洲大红收藏 [赛季]` | 查看三角洲大红收藏海报（支持赛季参数）；对应 `/df red-collection [赛季]` |
-| `@bot 三角洲大红记录` / `@bot 三角洲藏品记录` | 查看三角洲大红收藏记录列表；对应 `/df red-records` |
-| `@bot 三角洲社区改枪码 [武器] [最小价,最大价]` | 查看社区改枪码列表；对应 `/df solution-list [武器] [最小价,最大价]` |
-| `@bot 三角洲改枪码详情 <ID>` | 查看社区改枪码详情；对应 `/df solution-detail <ID>` |
-| `@bot 三角洲日报 [烽火|全面]` | 查看三角洲日报；对应 `/df daily [sol|mp]` |
-| `@bot 三角洲周报 [烽火|全面] [YYYYMMDD] [详细]` | 查看三角洲周报；对应 `/df weekly [sol|mp] [YYYYMMDD] [detail]` |
-| `@bot 三角洲战绩 [烽火|全面|全部] [页码]` | 查看三角洲战绩；对应 `/df record [sol|mp|all] [页码]` |
+| `@bot 三角洲 帮助` | 查看帮助 |
+| `@bot 三角洲 登录 [qq/微信]` | 私信发送登录二维码 |
+| `@bot 三角洲 状态` / `@bot 三角洲 退出` | 查看或清除本地会话 |
+| `@bot 三角洲 取消登录` | 取消等待扫码 |
+| `@bot 三角洲 信息` | 查询个人信息 |
+| `@bot 三角洲 战绩 [烽火/全面] [页码]` | 查询战绩 |
+| `@bot 三角洲 日报 [烽火/全面]` / `@bot 三角洲 周报 [烽火/全面]` | 查询日报或周报 |
+| `@bot 三角洲 每日密码` | 获取每日密码 |
 | `@bot steam <游戏名>` / `@bot 查价 <游戏名>` | 查询 Steam 游戏价格（ITAD 数据源） |
 | `@bot steam 关注 <游戏名>` | 关注游戏，价格达到史低时自动提醒 |
 | `@bot steam 取关 <ID>` | 取消关注 |
@@ -161,29 +146,11 @@
 | `/apex help` | 查看 Apex 插件帮助 |
 | `/arc <关键词或ID>` | 查询 ARC Raiders 物品信息与掉率 |
 | `/arcevent` | 查询 ARC Raiders 地图事件（截图） |
-| `/df help` | 查看三角洲插件帮助 |
-| `/df login [qq|wechat]` | 发起三角洲二维码登录（投递方式由 `login_delivery_mode` 配置决定） |
-| `/df bind-character` | 绑定三角洲游戏角色 |
-| `/df accounts` | 查看已绑定的三角洲账号列表 |
-| `/df switch <序号>` | 切换当前激活的三角洲账号 |
-| `/df info` | 查看三角洲个人信息 |
-| `/df uid` | 查看三角洲角色 UID |
-| `/df daily-keyword` / `/df password` | 查看三角洲每日密码 |
-| `/df daily-keyword-push on` / `/df daily-keyword-push off` | 开启或关闭当前频道的每日密码定时推送 |
-| `/df place-status` | 查看三角洲特勤处当前生产状态 |
-| `/df place-push on` / `/df place-push off` | 开启或关闭当前频道的特勤处制造完成推送 |
-| `/df collection [类型]` / `/df assets [类型]` | 查看三角洲藏品/非货币资产汇总 |
-| `/df object-search <关键词或ID>` | 搜索三角洲物品信息 |
-| `/df price-history <关键词或ID>` | 查看物品价格历史 |
-| `/df money` / `/df balance` | 查看三角洲货币信息 |
-| `/df ban-history` / `/df banhistory` | 查看三角洲封号/违规记录 |
-| `/df red-collection [赛季]` | 查看三角洲大红收藏海报 |
-| `/df red-records` | 查看三角洲大红收藏记录列表 |
-| `/df solution-list [武器] [最小价,最大价]` | 查看社区改枪码列表 |
-| `/df solution-detail <ID>` | 查看社区改枪码详情 |
-| `/df daily [sol|mp]` | 查看三角洲日报 |
-| `/df weekly [sol|mp] [YYYYMMDD] [detail]` | 查看三角洲周报 |
-| `/df record [sol|mp|all] [页码]` | 查看三角洲战绩 |
+| `/df 帮助` / `/df 登录 [qq/微信]` | 查看帮助或登录 |
+| `/df 状态` / `/df 退出` / `/df 取消登录` | 管理本地会话 |
+| `/df 信息` / `/df 每日密码` | 信息或每日密码 |
+| `/df 战绩 [烽火/全面] [页码]` | 查询战绩 |
+| `/df 日报 [烽火/全面]` / `/df 周报 [烽火/全面]` | 查询报告 |
 | `/steam <游戏名>` | 查询 Steam 游戏价格 |
 | `/steam watch <游戏名>` | 关注游戏，史低时自动提醒 |
 | `/steam unwatch <ID>` | 取消关注 |

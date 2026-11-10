@@ -22,7 +22,7 @@
 
 ```bash
 python tools/export_plugin_config_assets.py
-python tools/export_plugin_config_assets.py delta_force lol_ban
+python tools/export_plugin_config_assets.py delta_force_v2 lol_ban
 ```
 
 ## 新建插件
