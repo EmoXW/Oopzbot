@@ -136,7 +136,7 @@ class MusicCommandService:
                     await self._play(keyword, channel, area, user)
                 else:
                     await self._sender.send_message(
-                        "请输入歌名，例如:\n  @bot 播放海阔天空\n  @bot 播放 qq:周杰伦\n  @bot 播放 b站:稻香",
+                        "请输入歌名，例如:\n  @bot 播放海阔天空\n  @bot 播放 b站:稻香",
                         channel=channel, area=area,
                     )
                 return True
@@ -185,12 +185,12 @@ class MusicCommandService:
         if command in ("/bf", "/play"):
             if len(parts) < 2:
                 await self._sender.send_message(
-                    "用法: /bf 歌曲名\n  /bf qq 歌曲名 (QQ音乐)\n  /bf bili 歌曲名 (B站)",
+                    "用法: /bf 歌曲名\n  /bf bili 歌曲名 (B站)",
                     channel=channel, area=area,
                 )
                 return True
             slug = parts[1].lower()
-            _SLASH_PLATFORM_MAP = {"qq": "qq", "bili": "bilibili", "bilibili": "bilibili", "netease": "netease", "b站": "bilibili", "网易": "netease"}
+            _SLASH_PLATFORM_MAP = {"bili": "bilibili", "bilibili": "bilibili", "netease": "netease", "b站": "bilibili", "网易": "netease"}
             if slug in _SLASH_PLATFORM_MAP and len(parts) > 2:
                 platform = _SLASH_PLATFORM_MAP[slug]
                 keyword = " ".join(parts[2:])

@@ -40,10 +40,8 @@ CONFIG_GROUP_SOURCES: dict[str, str] = {
     "reminder": "REMINDER_CONFIG",
     "music": "MUSIC_CONFIG",
     "command_cooldown": "COMMAND_COOLDOWN_CONFIG",
-    "qq_music": "QQ_MUSIC_CONFIG",
     "bilibili_music": "BILIBILI_MUSIC_CONFIG",
     "message_stats": "MESSAGE_STATS_CONFIG",
-    "screen_share": "SCREEN_SHARE_CONFIG",
 }
 
 # ---------------------------------------------------------------------------
@@ -150,26 +148,12 @@ CONFIG_FIELD_SCHEMA: dict[str, dict[str, dict]] = {
         "default_seconds": {"type": "int", "min": 0, "max": 300, "default": 3},
         "exempt_admins": {"type": "bool", "default": True},
     },
-    "qq_music": {
-        "enabled": {"type": "bool", "default": False},
-        "base_url": {"type": "str", "max_len": 300, "default": "http://localhost:3300"},
-        "cookie": {"type": "str", "max_len": 3000, "sensitive": True, "expose_in_admin": True, "default": ""},
-    },
     "bilibili_music": {
         "enabled": {"type": "bool", "default": False},
         "cookie": {"type": "str", "max_len": 3000, "sensitive": True, "expose_in_admin": True, "default": ""},
     },
     "message_stats": {
         "enabled": {"type": "bool", "default": True},
-    },
-    "screen_share": {
-        "enabled": {"type": "bool", "default": False},
-        "agora_app_id": {"type": "str", "max_len": 32, "default": ""},
-        "agora_app_certificate": {"type": "str", "max_len": 32, "sensitive": True, "default": ""},
-        "presenter_link_ttl_seconds": {"type": "int", "min": 60, "max": 3600, "default": 600},
-        "session_max_seconds": {"type": "int", "min": 300, "max": 86400, "default": 14400},
-        "rtc_token_ttl_seconds": {"type": "int", "min": 300, "max": 86400, "default": 3600},
-        "default_quality": {"type": "str", "max_len": 16, "default": "1080p"},
     },
 }
 
@@ -219,10 +203,8 @@ SCHEDULER_CONFIG = _GROUP_TARGETS["scheduler"]
 REMINDER_CONFIG = _GROUP_TARGETS["reminder"]
 MUSIC_CONFIG = _GROUP_TARGETS["music"]
 COMMAND_COOLDOWN_CONFIG = _GROUP_TARGETS["command_cooldown"]
-QQ_MUSIC_CONFIG = _GROUP_TARGETS["qq_music"]
 BILIBILI_MUSIC_CONFIG = _GROUP_TARGETS["bilibili_music"]
 MESSAGE_STATS_CONFIG = _GROUP_TARGETS["message_stats"]
-SCREEN_SHARE_CONFIG = _GROUP_TARGETS["screen_share"]
 
 # ---------------------------------------------------------------------------
 # 配置分组定义（target=运行时 dict，fields=schema；二者均派生自上方单一来源）

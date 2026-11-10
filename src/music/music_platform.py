@@ -11,12 +11,12 @@ class MusicPlatform(Protocol):
 
     @property
     def name(self) -> str:
-        """平台标识符，如 "netease" / "qq" / "bilibili"。"""
+        """平台标识符，如 "netease" / "bilibili"。"""
         ...
 
     @property
     def display_name(self) -> str:
-        """平台显示名，如 "网易云" / "QQ音乐" / "B站"。"""
+        """平台显示名，如 "网易云" / "B站"。"""
         ...
 
     async def search(self, keyword: str, limit: int = 1) -> dict | None:

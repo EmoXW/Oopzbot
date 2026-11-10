@@ -543,7 +543,6 @@ class PlaybackMixin:
         """构建"正在播放"消息文本"""
         platform_name = {
             "netease": "网易云",
-            "qq": "QQ音乐",
             "bilibili": "B站",
         }.get(str(song_data.get("platform") or ""), "未知")
 

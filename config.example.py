@@ -94,13 +94,6 @@ NETEASE_CLOUD = {
     "audio_quality": "standard",           # standard=标准(体积小) / exhigh=较高音质
 }
 
-# QQ 音乐配置（需部署 QQMusicApi 服务）
-QQ_MUSIC_CONFIG = {
-    "enabled": False,
-    "base_url": "http://localhost:3300",   # QQ 音乐 API 服务地址
-    "cookie": "",                          # 可选，登录后的 Cookie
-}
-
 # B 站音乐配置
 BILIBILI_MUSIC_CONFIG = {
     "enabled": False,
@@ -131,17 +124,6 @@ WEB_PLAYER_CONFIG = {
     # 仅当 TCP 对端属于以下网段时才信任 X-Real-IP / X-Forwarded-For。
     # 裸机 Nginx 默认走回环；Docker Compose 会用环境变量覆盖为容器内 Nginx 的固定地址。
     "trusted_proxy_cidrs": ["127.0.0.1/32", "::1/128"],
-}
-
-# 网页屏幕共享
-SCREEN_SHARE_CONFIG = {
-    "enabled": False,
-    "agora_app_id": "",              # 声网项目 App ID（32 位十六进制）
-    "agora_app_certificate": "",     # 声网项目 App Certificate；不要提交真实值
-    "presenter_link_ttl_seconds": 600,
-    "session_max_seconds": 14400,
-    "rtc_token_ttl_seconds": 3600,
-    "default_quality": "1080p",      # 2k=最高画质；1080p=清晰优先；720p=流畅优先
 }
 
 # OneBot v11 旁路服务配置

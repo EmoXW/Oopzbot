@@ -149,65 +149,43 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 401)
 
-    def test_screen_share_heartbeat_rate_limit_is_per_presenter(self) -> None:
-        service = SimpleNamespace(heartbeat=AsyncMock(return_value={"ok": True}))
-        with patch("screen_share.web.get_screen_share_service", return_value=service):
-            for _ in range(30):
-                response = self.client.post(
-                    "/screen-share/api/presenter/heartbeat",
-                    headers={"Cookie": "oopz_screen_presenter=presenter-a"},
-                )
-                self.assertEqual(response.status_code, 200)
-            blocked = self.client.post(
-                "/screen-share/api/presenter/heartbeat",
-                headers={"Cookie": "oopz_screen_presenter=presenter-a"},
-            )
-            other_presenter = self.client.post(
-                "/screen-share/api/presenter/heartbeat",
-                headers={"Cookie": "oopz_screen_presenter=presenter-b"},
-            )
-
-        self.assertEqual(blocked.status_code, 429)
-        self.assertEqual(other_presenter.status_code, 200)
-
-    def test_screen_share_stop_api_requires_admin_login(self) -> None:
-        with patch.object(self.module, "_admin_enabled", return_value=True):
-            response = self.client.post(
-                "/admin/api/screen-shares/session-abcdefghijkl/stop",
-                json={},
-            )
-
-        self.assertEqual(response.status_code, 401)
-
-    def test_logged_in_admin_can_stop_one_screen_share(self) -> None:
-        session_id = "session-abcdefghijkl"
-        session = {
-            "id": session_id,
-            "status": "active",
-            "area": "area-1",
-            "channel": "channel-1",
-            "presenter_uid": "user-1",
-        }
-        service = SimpleNamespace(stop_by_id=AsyncMock(return_value=session))
-        announce = AsyncMock()
+    def test_removed_screen_sharing_routes_are_unavailable(self) -> None:
         with (
             patch.object(self.module, "_admin_enabled", return_value=True),
             patch.object(self.module, "_is_admin_authorized", return_value=True),
-            patch(
-                "web.admin.screen_share.get_screen_share_service",
-                return_value=service,
-            ),
-            patch("web.admin.screen_share.announce_ended", announce),
         ):
-            response = self.client.post(
-                f"/admin/api/screen-shares/{session_id}/stop",
-                json={},
-            )
+            for method, path in (
+                ("GET", "/screen-share/p"),
+                ("GET", "/screen-share/w"),
+                ("GET", "/screen-share/assets/app.js"),
+                ("POST", "/screen-share/api/presenter/claim"),
+                ("POST", "/screen-share/api/viewer/token"),
+                ("GET", "/admin/screen-share"),
+                ("GET", "/admin/api/screen-shares"),
+                ("POST", "/admin/api/screen-shares/session-1/stop"),
+            ):
+                with self.subTest(method=method, path=path):
+                    response = self.client.request(method, path)
+                    self.assertEqual(response.status_code, 404)
 
+    def test_config_keeps_voice_settings_without_screen_sharing(self) -> None:
+        with (
+            patch.object(self.module, "_admin_enabled", return_value=True),
+            patch.object(self.module, "_is_admin_authorized", return_value=True),
+        ):
+            response = self.client.get("/admin/api/config")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["session_id"], session_id)
-        service.stop_by_id.assert_awaited_once_with(session_id, reason="admin_stop")
-        announce.assert_awaited_once_with(session)
+        config = response.json()["config"]
+        self.assertNotIn("screen_share", config)
+        self.assertNotIn("qq_music", config)
+        self.assertIn("bilibili_music", config)
+        self.assertIn("agora_app_id", config["oopz"])
+        self.assertIn("agora_init_timeout", config["oopz"])
+
+    def test_platform_resolver_rejects_removed_qq_music(self) -> None:
+        with self.assertRaisesRegex(ValueError, "不支持的音乐平台"):
+            self.module._resolve_platform("qq")
+
 
     def test_plugins_api_returns_inventory_when_logged_in(self) -> None:
         with (
@@ -465,7 +443,7 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
             self.module._area_key(self.module.KEY_QUEUE, "area-2"),
             [
                 json.dumps(
-                    {"song_id": "2", "name": "稻香", "platform": "qq"},
+                    {"song_id": "2", "name": "稻香", "platform": "netease"},
                     ensure_ascii=False,
                 )
             ],
@@ -479,7 +457,7 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["platform"], "bilibili")
         self.assertEqual(queue.status_code, 200)
-        self.assertEqual(queue.json()["queue"][0]["platform"], "qq")
+        self.assertEqual(queue.json()["queue"][0]["platform"], "netease")
 
     def test_player_page_protects_cover_requests_and_uses_song_platform(self) -> None:
         r = _FakeRedis().seed("music:web_access_token", "token-1")
@@ -867,7 +845,6 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
             "/admin",
             "/admin/music",
             "/admin/config",
-            "/admin/screen-share",
             "/admin/stats",
             "/admin/system",
             "/admin/setup",
@@ -885,14 +862,6 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIn('id="mobileNav"', response.text)
                     self.assertIn('id="topStatus"', response.text)
 
-    def test_screen_share_page_includes_confirmation_modal(self) -> None:
-        with patch.object(self.module, "_admin_enabled", return_value=True):
-            response = self.client.get("/admin/screen-share")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('id="modalDialog"', response.text)
-        self.assertIn('id="modalBody"', response.text)
-        self.assertIn('id="modalFooter"', response.text)
 
     def test_setup_diagnostics_api_returns_report_when_logged_in(self) -> None:
         fake_report = {

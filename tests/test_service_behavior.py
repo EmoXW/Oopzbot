@@ -843,6 +843,35 @@ class MusicCommandServiceTest(unittest.IsolatedAsyncioTestCase):
             infrastructure=SimpleNamespace(sender=self.sender, music=self.music),
         )
 
+    async def test_remaining_platform_prefixes_route_to_matching_music(self) -> None:
+        from app.services.interaction.music_command_service import MusicCommandService
+
+        service = MusicCommandService(self.handler)
+        for prefix, platform in (("网易:", "netease"), ("b站:", "bilibili")):
+            with self.subTest(platform=platform):
+                self.music.play_song.reset_mock()
+                await service.handle_mention(
+                    f"播放 {prefix}稻香", "channel-1", "area-1", "user-1"
+                )
+                self.music.play_song.assert_awaited_once_with(
+                    "稻香", platform, "channel-1", "area-1", "user-1"
+                )
+
+    async def test_remaining_slash_platforms_route_to_matching_music(self) -> None:
+        from app.services.interaction.music_command_service import MusicCommandService
+
+        service = MusicCommandService(self.handler)
+        for slug, platform in (("netease", "netease"), ("bili", "bilibili")):
+            with self.subTest(platform=platform):
+                self.music.play_song.reset_mock()
+                await service.handle_slash(
+                    "/bf", None, None, ["/bf", slug, "稻香"],
+                    "channel-1", "area-1", "user-1",
+                )
+                self.music.play_song.assert_awaited_once_with(
+                    "稻香", platform, "channel-1", "area-1", "user-1"
+                )
+
     async def test_handle_mention_play_delegates_with_keyword(self) -> None:
         from app.services.interaction.music_command_service import MusicCommandService
 

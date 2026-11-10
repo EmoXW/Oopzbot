@@ -67,7 +67,7 @@ async def admin_update_config(request: Request):
     if "netease" in applied:
         web_player.reset_netease()
         _set_liked_ids_cache([])
-    if {"netease", "qq_music", "bilibili_music"} & set(applied):
+    if {"netease", "bilibili_music"} & set(applied):
         try:
             music_runtime = web_player.refresh_music_platforms()
         except Exception as exc:

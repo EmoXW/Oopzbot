@@ -2,12 +2,12 @@
   <img src="docs/assets/readme/oopz-icon.png" alt="Oopz" width="72" />
 </p>
 
-<h1 align="center">Oopz Bot</h1>
+<h1 align="center">Oopz Bot · 二次开发版</h1>
 
 <p align="center">
   面向 <a href="https://web.oopz.cn">Oopz</a> 的多功能频道机器人。
   <br />
-  支持音乐点播、语音频道播放、网页屏幕共享、频道管理、Web 播放器、管理后台和插件扩展。
+  支持音乐点播、语音频道播放、频道管理、Web 播放器、管理后台和插件扩展。
 </p>
 
 <p align="center">
@@ -21,12 +21,24 @@
   <a href="docs/commands.md">命令列表</a> ·
   <a href="docs/configuration.md">配置说明</a> ·
   <a href="docs/web-player.md">Web 播放器</a> ·
-  <a href="docs/screen-share.md">屏幕共享</a> ·
   <a href="docs/onebot-v11.md">OneBot v11</a> ·
   <a href="docs/plugin-development.md">插件开发</a>
 </p>
 
 ---
+
+## 关于本版本
+
+本项目由 EmoXW 基于 [tangqingfeng7/Oopzbot](https://github.com/tangqingfeng7/Oopzbot)
+进行二次开发，保留上游 Git 历史和贡献者记录，不是上游官方发布版本。
+当前基于上游提交 [`856ee9d`](https://github.com/tangqingfeng7/Oopzbot/commit/856ee9d)。
+
+本版本已移除网页屏幕共享和 QQ 音乐，包括对应的命令、后台页面、配置与部署检查。
+保留网易云音乐、B 站音乐、Oopz 语音播放、Web 播放器、管理后台、频道管理、插件和 OneBot v11。
+网易云仍为默认音乐平台；Redis 建议开启持久化，用于保留队列等运行状态。
+
+Docker 部署使用本仓库源码执行 `docker compose up -d --build`，以包含本版本改动。
+上游已发布镜像不包含这里的删减。详细改动及验证记录见 [二次开发说明](docs/derivative.md)。
 
 ## 功能展示
 
@@ -69,10 +81,9 @@
 
 | 模块 | 能做什么 |
 | --- | --- |
-| 音乐点播 | 网易云、QQ 音乐、B 站搜索播放，支持队列、切歌、随机播放、喜欢列表 |
+| 音乐点播 | 网易云、B 站搜索播放，支持队列、切歌、随机播放、喜欢列表 |
 | 语音播放 | Bot 可进入 Oopz 语音频道，通过 Agora 推流播放音乐 |
 | Web 播放器 | 浏览器控制播放、搜索点歌、查看歌词、管理队列和音量 |
-| 网页屏幕共享 | Bot 私信单次发起链接，同一文字频道支持多人同时共享，后台可观看或结束指定共享 |
 | 频道管理 | 成员查询、身份组、禁言、禁麦、踢出、封禁管理 |
 | 自动管理 | 自动撤回、成员加入/退出通知 |
 | 提醒统计 | 定时提醒、活跃排行、频道统计、点歌排行、最近播放 |
@@ -95,11 +106,11 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-脚本会依次建好虚拟环境、装 Python 依赖和浏览器、生成配置文件、校验屏幕共享网页产物、检查并安装 Redis
-与网易云音乐 API，然后问一次 Oopz 账号密码。首次运行会过一遍可选配置（后台密码、声网屏幕共享、
-网易云 Cookie、代理、管理员 UID），每项都能直接回车跳过。App Certificate 使用不回显输入，不会打印到部署日志。
+脚本会依次建好虚拟环境、装 Python 依赖和浏览器、生成配置文件、检查并安装 Redis
+与网易云音乐 API，然后问一次 Oopz 账号密码。首次运行会过一遍可选配置（后台密码、
+网易云 Cookie、代理、管理员 UID），每项都能直接回车跳过。
 
-装不上的东西一律降级：没有 Redis 就用内存队列（重启后队列丢失），但屏幕共享会为保护权限状态而停用；
+装不上的东西一律降级：没有 Redis 就用内存队列（重启后队列丢失）；
 没有网易云 API 就没有点歌，没有浏览器就没有语音——其余功能照常。只有缺少
 Oopz 凭据会拦住启动。
 
@@ -115,8 +126,8 @@ Oopz 凭据会拦住启动。
 ### 手动准备
 
 - Python 3.10+
-- Redis（可选：连不上会自动退到内存队列，但屏幕共享会停用）
-- Node.js 18+（非 Docker 部署时仅用于网易云音乐 API；屏幕共享使用已编译产物）
+- Redis（可选：连不上会自动退到内存队列）
+- Node.js 18+（非 Docker 部署时仅用于网易云音乐 API）
 - Chrome / Edge 或 Playwright Chromium（语音频道播放会用到）
 
 ### 复制配置文件

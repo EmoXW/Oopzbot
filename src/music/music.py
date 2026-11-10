@@ -78,10 +78,6 @@ class _NeteaseSongUrlProvider(Protocol):
 
 
 _PLATFORM_PREFIX_MAP = {
-    "qq:": "qq",
-    "QQ:": "qq",
-    "qq\uff1a": "qq",
-    "QQ\uff1a": "qq",
     "b\u7ad9:": "bilibili",
     "B\u7ad9:": "bilibili",
     "bili:": "bilibili",
@@ -245,15 +241,7 @@ class MusicHandler(PlaybackMixin):
             logger.debug(f"写入 Web 播放器活跃域失败: {e}")
 
     def _init_extra_platforms(self) -> None:
-        """初始化并注册 QQ 音乐和 B 站平台（仅在配置启用时）。"""
-        try:
-            from music.qq_music import QQMusic
-            qq = QQMusic()
-            if qq.enabled:
-                self.platforms.register(qq)
-                logger.info("QQ 音乐平台已注册")
-        except Exception as e:
-            logger.debug("QQ 音乐平台初始化跳过: %s", e)
+        """初始化并注册 B 站平台（仅在配置启用时）。"""
         try:
             from music.bilibili_music import BilibiliMusic
             bili = BilibiliMusic()
@@ -1485,7 +1473,6 @@ class MusicHandler(PlaybackMixin):
 
         platform_name = {
             "netease": "网易云",
-            "qq": "QQ音乐",
             "bilibili": "B站",
         }.get(str(song_data.get("platform") or ""), "网易云")
 
