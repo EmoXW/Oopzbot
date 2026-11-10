@@ -202,6 +202,7 @@
     AdminShell.bootstrapAuth({
       page: "music",
       loggedInText: "已登录音乐页",
+      loadMsgId: "ctlMsg",
       onLogin: async () => {
         await loadQueue();
         if (searchKeyword) {

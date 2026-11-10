@@ -368,15 +368,26 @@
     async function check() {
       try {
         await req(meUrl);
-        setAuthState({ loggedIn: true, loggedInText, statusTargets });
-        if (settings.onLogin) {
-          await settings.onLogin();
-        }
       } catch (error) {
         setAuthState({ loggedIn: false, loggedOutText, statusTargets });
         showMessage(loginMsgId, "");
         if (settings.onLoggedOut) {
           settings.onLoggedOut(error);
+        }
+        return;
+      }
+      setAuthState({ loggedIn: true, loggedInText, statusTargets });
+      try {
+        if (settings.onLogin) {
+          await settings.onLogin();
+        }
+      } catch (error) {
+        statusTargets.forEach((target) => setStatus("页面加载失败：" + error.message, "error", target));
+        if (settings.loadMsgId) {
+          showMessage(settings.loadMsgId, error.message, true);
+        }
+        if (settings.onLoadError) {
+          settings.onLoadError(error);
         }
       }
     }
