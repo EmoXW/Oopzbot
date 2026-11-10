@@ -252,6 +252,9 @@ http://localhost:8080/health
 
 ## Docker 部署
 
+本二次开发版的 Docker Hub 镜像为 `yuan180/oopzbot:latest`（`linux/amd64`）。
+使用现成镜像的部署步骤与发布方法见 [Docker Hub 镜像](docs/dockerhub.md)。
+
 Docker 会一起启动 Bot、Redis、网易云音乐 API 和 Nginx。首次启动不能直接
 执行 `docker compose up`：需要先准备 `.env`、`config/runtime.py`、
 `config/private_key.py`、可写的数据/日志目录，以及

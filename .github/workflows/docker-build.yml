@@ -8,9 +8,19 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified image to yuan180/oopzbot on Docker Hub
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+env:
+  DOCKERHUB_USERNAME: yuan180
+  DOCKERHUB_IMAGE: yuan180/oopzbot
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,7 +53,11 @@ jobs:
             nginx:alpine nginx -t
 
       - name: Build image
-        run: docker build --pull -t oopzbot:test .
+        run: |
+          docker build --pull -t oopzbot:test \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            .
 
       - name: Verify non-root Chromium runtime
         run: |
@@ -147,3 +161,29 @@ jobs:
           test "$(cat "$bind_root/config/private_key.py")" = updated-key
           test "$(stat -c %u "$bind_root/data/.write-test")" = "$host_uid"
           test "$(stat -c %g "$bind_root/data/.write-test")" = "$host_gid"
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Publish verified image
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: |
+          set -euo pipefail
+          revision_tag="sha-${GITHUB_SHA:0:12}"
+          docker tag oopzbot:test "${DOCKERHUB_IMAGE}:${revision_tag}"
+          docker tag oopzbot:test "${DOCKERHUB_IMAGE}:latest"
+          docker push "${DOCKERHUB_IMAGE}:${revision_tag}"
+          docker push "${DOCKERHUB_IMAGE}:latest"
+          digest="$(docker image inspect --format='{{index .RepoDigests 0}}' "${DOCKERHUB_IMAGE}:latest")"
+          {
+            echo '## Docker Hub image published'
+            echo
+            echo "- Image: \`${DOCKERHUB_IMAGE}:latest\`"
+            echo "- Revision: \`${DOCKERHUB_IMAGE}:${revision_tag}\`"
+            echo "- Digest: \`${digest}\`"
+            echo '- Platform: `linux/amd64`'
+          } >> "$GITHUB_STEP_SUMMARY"

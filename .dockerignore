@@ -8,6 +8,7 @@ config.py
 private_key.py
 config/runtime.py
 config/private_key.py
+config/plugins/*/config.json
 .config.py.*.tmp
 .config.py.*.bak
 .private_key.py.*.tmp
@@ -18,6 +19,7 @@ config/.private_key.py.*.tmp
 config/.private_key.py.*.bak
 .env
 .env.local
+nginx/ssl/*.pem
 
 # Runtime data (mounted at runtime)
 data/
