@@ -86,7 +86,7 @@ class DeadCodeCleanupContractsTest(unittest.TestCase):
         self.assertIn('document.createElement("audio")', stream_body)
         self.assertIn("createMediaElementSource(media)", stream_body)
         self.assertIn("createMediaStreamDestination()", stream_body)
-        self.assertIn("AgoraRTC.createCustomAudioTrack({ mediaStreamTrack })", stream_body)
+        self.assertRegex(stream_body, r"AgoraRTC\.createCustomAudioTrack\(\{\s*mediaStreamTrack[,\s]")
         self.assertIn("await waitForMediaCanPlay(media, gen)", stream_body)
         self.assertIn("await media.play()", stream_body)
         self.assertIn("publishStreamingUrlAsPlayback(url, gen)", remote_body)

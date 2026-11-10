@@ -628,7 +628,10 @@ async function publishStreamingUrlAsPlayback(url, gen) {
     throw new Error("streaming media did not create an audio track");
   }
 
-  const localTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack });
+  const localTrack = AgoraRTC.createCustomAudioTrack({
+    mediaStreamTrack,
+    encoderConfig: "high_quality_stereo",
+  });
   const playback = makePlayback(localTrack, {
     media,
     audioContext,
@@ -721,6 +724,7 @@ window.agoraPlayLocal = async (base64Data, mimeType) => {
 
     localTrack = await AgoraRTC.createBufferSourceAudioTrack({
       source: audioBuffer,
+      encoderConfig: "high_quality_stereo",
       cacheOnlineFile: false,
     });
 
