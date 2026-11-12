@@ -1,7 +1,7 @@
 # Docker Hub 镜像
 
 镜像地址：[`yuan180/oopzbot`](https://hub.docker.com/r/yuan180/oopzbot)。
-平台为 `linux/amd64`，包含 Chromium 和 Python 运行依赖，使用非 root 用户运行。
+平台为 `linux/amd64` 和 `linux/arm64`（多架构标签，Docker 自动选择本机架构），包含 Chromium 和 Python 运行依赖，使用非 root 用户运行。
 镜像保留网易云和 B 站功能，移除了屏幕共享与 QQ 音乐，并包含后台登录状态修复。
 
 ## 使用已发布镜像
@@ -30,7 +30,7 @@ Compose 会启动 Bot、Redis、网易云 API 和 Nginx。
 
 ## 镜像标签与回滚
 
-- `latest`：最近一次手动发布的镜像。
+- `latest`：最近一次显式发布的多架构镜像。
 - `sha-<12 位提交号>`：对应源码提交的固定版本。
 
 需要回滚时，把 `.env` 中的 `BOT_IMAGE` 改成对应固定版本，再执行上述拉取、启动命令。
@@ -41,6 +41,8 @@ Compose 会启动 Bot、Redis、网易云 API 和 Nginx。
 令牌所属账号应为工作流中的 `DOCKERHUB_USERNAME`（当前为 `yuan180`）。
 
 进入 GitHub Actions → Docker Build → Run workflow，勾选 `publish`。
-工作流先验证 Compose/Nginx、构建镜像、测试非 root Chromium 和挂载目录权限；
-全部通过后才登录 Docker Hub 并推送两个标签，镜像摘要会写入运行摘要。
-普通 push 和 pull request 只验证构建，不发布镜像。
+工作流分别在原生 AMD64 与 ARM64 runner 上验证 Compose/Nginx、构建镜像、测试非 root Chromium 和挂载目录权限。
+各架构验证后先推送独立的临时构建标签；只有两边全部成功才合并发布 `latest` 和提交号多架构标签，结果写入运行摘要。
+普通 push 和 pull request 只验证构建，不发布镜像。也可以在推送 main 的提交信息中显式添加 `[publish docker]` 触发发布。
+
+Apple 芯片 Mac 使用这些新标签时无需指定 `platform: linux/amd64`；如旧 Compose 强制指定了该平台，请移除此项才能选择 ARM64 原生镜像。旧的单架构固定版本标签保持不变。

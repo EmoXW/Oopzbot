@@ -28,9 +28,21 @@ concurrency:
 
 jobs:
   docker-build:
-    name: docker-build
-    runs-on: ubuntu-latest
+    name: docker-build / ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            machine: x86_64
+            runner: ubuntu-24.04
+          - arch: arm64
+            machine: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      PUBLISH_IMAGE: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish docker]')) }}
 
     steps:
       - name: Checkout
@@ -54,21 +66,25 @@ jobs:
 
       - name: Build image
         run: |
-          docker build --pull -t oopzbot:test \
+          docker build --pull --platform linux/${{ matrix.arch }} -t oopzbot:test \
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
             .
 
       - name: Verify non-root Chromium runtime
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
         run: |
           docker run --rm -i --network none --shm-size=1g \
-            -e PYTHONPATH=/app/src \
+            -e PYTHONPATH=/app/src -e EXPECTED_MACHINE \
             --entrypoint python oopzbot:test - <<'PY'
           import os
+          import platform
           from pathlib import Path
           from playwright.sync_api import sync_playwright
           from core.browser_launch import VOICE_STREAM_ARGS
 
+          assert platform.machine() == os.environ["EXPECTED_MACHINE"], platform.machine()
           assert os.getuid() == 1000, os.getuid()
           assert os.getgid() == 1000, os.getgid()
           assert os.environ["PLAYWRIGHT_BROWSERS_PATH"] == "/ms-playwright"
@@ -163,27 +179,82 @@ jobs:
           test "$(stat -c %g "$bind_root/data/.write-test")" = "$host_gid"
 
       - name: Log in to Docker Hub
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        if: env.PUBLISH_IMAGE == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Publish verified image
-        if: github.event_name == 'workflow_dispatch' && inputs.publish
+      - name: Push tested architecture image
+        if: env.PUBLISH_IMAGE == 'true'
+        run: |
+          set -euo pipefail
+          staging_tag="${DOCKERHUB_IMAGE}:build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${{ matrix.arch }}"
+          docker tag oopzbot:test "$staging_tag"
+          docker push "$staging_tag"
+          mkdir -p /tmp/image-digests
+          docker image inspect --format='{{index .RepoDigests 0}}' "$staging_tag" > "/tmp/image-digests/${{ matrix.arch }}.txt"
+
+      - name: Upload tested image digest
+        if: env.PUBLISH_IMAGE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digest-${{ matrix.arch }}
+          path: /tmp/image-digests/*.txt
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    name: publish-multiarch
+    needs: docker-build
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.publish) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish docker]'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download tested image digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-digest-*
+          path: /tmp/image-digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Publish verified multi-platform image
         run: |
           set -euo pipefail
           revision_tag="sha-${GITHUB_SHA:0:12}"
-          docker tag oopzbot:test "${DOCKERHUB_IMAGE}:${revision_tag}"
-          docker tag oopzbot:test "${DOCKERHUB_IMAGE}:latest"
-          docker push "${DOCKERHUB_IMAGE}:${revision_tag}"
-          docker push "${DOCKERHUB_IMAGE}:latest"
-          digest="$(docker image inspect --format='{{index .RepoDigests 0}}' "${DOCKERHUB_IMAGE}:latest")"
+          amd64_digest="$(cat /tmp/image-digests/amd64.txt)"
+          arm64_digest="$(cat /tmp/image-digests/arm64.txt)"
+          docker buildx imagetools create \
+            --tag "${DOCKERHUB_IMAGE}:${revision_tag}" \
+            "$amd64_digest" "$arm64_digest"
+          docker buildx imagetools inspect --raw "${DOCKERHUB_IMAGE}:${revision_tag}" > /tmp/manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          index = json.loads(Path("/tmp/manifest.json").read_text())
+          platforms = {(m["platform"]["os"], m["platform"]["architecture"]) for m in index["manifests"]}
+          assert platforms == {("linux", "amd64"), ("linux", "arm64")}, platforms
+          PY
+          docker buildx imagetools create \
+            --tag "${DOCKERHUB_IMAGE}:latest" \
+            "${DOCKERHUB_IMAGE}:${revision_tag}"
+          docker buildx imagetools inspect "${DOCKERHUB_IMAGE}:latest" >> "$GITHUB_STEP_SUMMARY"
           {
-            echo '## Docker Hub image published'
+            echo '## Docker Hub multi-platform image published'
             echo
             echo "- Image: \`${DOCKERHUB_IMAGE}:latest\`"
             echo "- Revision: \`${DOCKERHUB_IMAGE}:${revision_tag}\`"
-            echo "- Digest: \`${digest}\`"
-            echo '- Platform: `linux/amd64`'
+            echo '- Platforms: `linux/amd64`, `linux/arm64`'
+            echo '- Both images passed native Chromium and bind-mount permission checks.'
           } >> "$GITHUB_STEP_SUMMARY"
