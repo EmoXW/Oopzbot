@@ -124,31 +124,6 @@ HTTP 返回 401/428 时仍应检查凭据或在后台重新登录。
 | `auto_play_enabled` | 队列播完后是否自动随机播放喜欢列表（默认 `True`） |
 | `default_volume` | 默认音量 0-100（默认 `50`） |
 
-### LOL 封号查询插件 (`config/plugins/lol_ban/config.json`)
-
-| 配置项 | 说明 |
-|--------|------|
-| `enabled` | 是否启用（默认 `false`） |
-| `api_url` | 查询 API 地址 |
-| `token` | API 认证令牌 |
-| `proxy` | 代理地址，留空走系统代理 |
-
-### FA8 战绩查询插件 (`config/plugins/lol_fa8/config.json`)
-
-| 配置项 | 说明 |
-|--------|------|
-| `enabled` | 是否启用（默认 `false`） |
-| `username` | FA8 登录账号 |
-| `password` | FA8 登录密码 |
-| `default_area` | 默认大区 ID（`1`=艾欧尼亚） |
-
-### 三角洲插件 (`config/plugins/delta_force_v2/config.json`)
-
-使用新版后端。参考同目录 `example.json`，填写 `enabled: true`、`api_key` 和平台个人用户 ID `client_id`。
-`base_url` 默认 `https://delta-test-api.shallow.ink`，`proxy` 默认 `direct`。
-请求超时与扫码轮询参数见同目录 `schema.json`。二维码仅私信发送。
-旧版插件已移除，不再支持其图片渲染和自动推送配置。详细功能见 `plugins/delta_force_v2/README.md`。
-
 ### 聊天自动回复 (`CHAT_CONFIG`)
 
 | 配置项 | 说明 |
@@ -345,7 +320,7 @@ Compose 的宿主配置文件位于 `config/runtime.py` 与
 
 ## 插件配置
 
-插件配置位于 `config/plugins/` 目录。现在每个插件一个子目录，例如 `config/plugins/delta_force_v2/config.json`、`config/plugins/delta_force_v2/example.json`、`config/plugins/delta_force_v2/schema.json`。复制 `example.json` 为 `config.json` 后修改即可。
+插件配置位于 `config/plugins/` 目录。当前不预装业务插件，自定义插件使用 `config/plugins/<插件名>/` 子目录。复制 `example.json` 为 `config.json` 后修改即可。
 
 ## private_key.py
 

@@ -45,7 +45,6 @@ from core.redis_protocol import (
 )
 from music.music_platform import MusicPlatform
 from music.netease import NeteaseCloud
-from web.delta_login import router as delta_login_router
 from web.web_link_token import get_active_area, get_token, set_token, touch_access
 from web.web_rate_limit import (
     client_ip,
@@ -64,7 +63,6 @@ logger = get_logger("WebPlayer")
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Oopz Music Player", docs_url=None, redoc_url=None)
-app.include_router(delta_login_router)
 
 _WEB_ASSETS_DIR = os.path.join(cfg.PROJECT_ROOT, "src", "web", "assets")
 _ADMIN_ASSETS_DIR = os.path.join(_WEB_ASSETS_DIR, "admin")

@@ -161,22 +161,6 @@ NeteaseCloud API (:3000)
 │   └── domain/                  # 业务规则、插件契约和数据结构
 │
 ├── plugins/                     # 插件目录
-│   ├── delta_force/             # 三角洲插件
-│   │   ├── __init__.py          # 插件入口
-│   │   ├── api.py               # API 封装
-│   │   ├── assets.py            # 静态资源辅助
-│   │   ├── login.py             # 登录流程
-│   │   ├── store.py             # 本地状态存储
-│   │   ├── render.py            # 海报渲染
-│   │   ├── formatters.py        # 文案格式化
-│   │   ├── daily_push.py        # 每日密码推送
-│   │   ├── place_push.py        # 特勤处推送
-│   │   └── assets/              # 静态资源
-│   ├── lol_ban/                 # LOL 封号查询插件
-│   ├── lol_fa8/                 # LOL 战绩查询插件
-│   ├── apex/                    # Apex Legends 战绩与游戏信息查询插件
-│   ├── arc_raiders/             # ARC Raiders 物品与掉率查询插件
-│   ├── steam_price/             # Steam 游戏价格查询与降价提醒插件
 │   ├── _shared/                 # 插件共享基类与小工具（IntervalWorker 后台任务 / JsonHttpClient）
 │   └── README.md                # 插件说明
 │
@@ -255,7 +239,7 @@ NeteaseCloud API (:3000)
 ## 数据库表结构
 
 下表是 `src/core/database.py::init_database()` 在应用启动时创建的 11 张核心表。
-Steam 插件按需创建自己的表，OneBot v11 的 ID 与消息映射由 SDK 存在独立的
+自定义插件可按需创建自己的表，OneBot v11 的 ID 与消息映射由 SDK 存在独立的
 `data/onebot_v11.sqlite3`，两者都不计入这 11 张。
 
 | 表名 | 用途 | 关键字段 |
@@ -264,9 +248,6 @@ Steam 插件按需创建自己的表，OneBot v11 的 ID 与消息映射由 SDK 
 | `song_cache` | 跨平台歌曲信息与播放次数缓存 | song_id, platform, song_name, play_count |
 | `play_history` | 逐次播放历史 | song_cache_id, platform, channel_id, user_id, played_at |
 | `statistics` | 每日播放、缓存命中与平台分布汇总 | date, total_plays, cache_hits, cache_misses, platform_breakdown |
-| `delta_force_active_token` | 三角洲插件的用户活跃账号组与 framework token | user_id, account_group, framework_token, updated_at |
-| `delta_force_place_push` | 三角洲特勤处推送订阅及上次快照 | user_id, channel_id, area_id, last_snapshot, updated_at |
-| `delta_force_daily_keyword_push` | 三角洲每日密码推送订阅及去重日期 | channel_id, area_id, last_push_date, updated_at |
 | `scheduled_messages` | Admin 配置的定时频道消息 | name, cron_hour, cron_minute, weekdays, channel_id, area_id, enabled |
 | `reminders` | 用户定时提醒及执行状态 | user_id, channel_id, area_id, message_text, fire_at, fired |
 | `message_stats` | 按日期、频道、域和用户聚合的消息计数 | date, channel_id, area_id, user_id, message_count |

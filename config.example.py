@@ -100,8 +100,7 @@ BILIBILI_MUSIC_CONFIG = {
     "cookie": "",  # 可选，B 站 Cookie（获取更高音质需要）
 }
 
-# LOL 插件配置
-# 已迁移到 config/plugins/lol_ban/config.json 与 config/plugins/lol_fa8/config.json（见 config/plugins/README.md）
+# 自定义插件配置见 config/plugins/README.md
 
 
 # Web 播放器配置

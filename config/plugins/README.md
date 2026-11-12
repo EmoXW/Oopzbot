@@ -12,9 +12,9 @@
 
 例如：
 
-- `lol_ban/config.json`
-- `lol_ban/example.json`
-- `lol_ban/schema.json`
+- `demo_plugin/config.json`
+- `demo_plugin/example.json`
+- `demo_plugin/schema.json`
 
 ## 资产刷新
 
@@ -22,7 +22,7 @@
 
 ```bash
 python tools/export_plugin_config_assets.py
-python tools/export_plugin_config_assets.py delta_force_v2 lol_ban
+python tools/export_plugin_config_assets.py demo_plugin
 ```
 
 ## 新建插件

@@ -99,18 +99,18 @@ class FooPlugin(PluginCommandMixin, BotModule):
 
 ```bash
 python tools/export_plugin_config_assets.py
-python tools/export_plugin_config_assets.py delta_force lol_ban
+python tools/export_plugin_config_assets.py demo_plugin
 ```
 
 ## 共享基类
 
 `plugins/_shared/` 提供了插件间复用的基类，避免每个插件重复造轮子：
 
-- `PluginCommandMixin`（`_shared/command_mixin.py`）：统一的 mention/slash 命令入口。插件继承它后只需实现 `dispatch_command`，前缀剥离、slash 匹配、异常包装与统一发送都由 mixin 完成。当前全部插件均采用此写法（参考 `apex`、`steam_price`、`lol_ban` 等），新插件请遵循。
-- `IntervalWorker`（`_shared/background.py`）：按固定间隔运行的可取消 `asyncio.Task` 基类，统一封装「启动一次 / 停止 / 间隔轮询」生命周期。子类实现 `async def _tick()`，在合适时机调用 `_start_task()`，卸载时 `await stop()`；长循环里可用 `self.stopping` 提前退出。适合定时推送和轮询监控（参考 `delta_force/daily_push.py`、`steam_price/monitor.py`）。
-- `JsonHttpClient`（`_shared/http_client.py`）：带重试与 JSON 解析的异步 HTTP 客户端基类，统一封装 User-Agent、超时、代理与重试循环。通过 `await request_json(method, url, ...)` 发起请求，成功返回解析后的 JSON，网络异常重试耗尽或 JSON 解析失败返回 `{"_error": ...}`；`on_status` 回调可拦截 404/429 等状态码（参考 `apex/api.py`、`steam_price/api.py`）。
+- `PluginCommandMixin`（`_shared/command_mixin.py`）：统一的 mention/slash 命令入口。插件继承它后只需实现 `dispatch_command`，前缀剥离、slash 匹配、异常包装与统一发送都由 mixin 完成。当前全部插件均采用此写法，新插件请遵循。
+- `IntervalWorker`（`_shared/background.py`）：按固定间隔运行的可取消 `asyncio.Task` 基类，统一封装「启动一次 / 停止 / 间隔轮询」生命周期。子类实现 `async def _tick()`，在合适时机调用 `_start_task()`，卸载时 `await stop()`；长循环里可用 `self.stopping` 提前退出。适合定时推送和轮询监控。
+- `JsonHttpClient`（`_shared/http_client.py`）：带重试与 JSON 解析的异步 HTTP 客户端基类，统一封装 User-Agent、超时、代理与重试循环。通过 `await request_json(method, url, ...)` 发起请求，成功返回解析后的 JSON，网络异常重试耗尽或 JSON 解析失败返回 `{"_error": ...}`；`on_status` 回调可拦截 404/429 等状态码。
 
-另外，默认值应以 `config_spec` 为单一来源——若需要在 service 层拿到默认配置，可从 `config_spec.fields` 派生，而不要再单独维护一份 `_DEFAULT_CONFIG` 字典（参考 `lol_ban` / `lol_fa8`）。
+另外，默认值应以 `config_spec` 为单一来源——若需要在 service 层拿到默认配置，可从 `config_spec.fields` 派生，而不要再单独维护一份 `_DEFAULT_CONFIG` 字典。
 
 ## 新建插件
 

@@ -1,6 +1,6 @@
 # 插件目录说明
 
-这个目录用于放置插件源码。Bot 启动时会自动扫描并加载这里的插件。
+这个目录用于放置插件源码。Bot 启动时会自动扫描并加载这里的插件。当前不预装业务插件，仅保留 `_shared` 开发辅助模块。
 
 推荐结构是一个插件一个目录：
 
@@ -58,7 +58,7 @@ plugins/
 
 ```bash
 python tools/export_plugin_config_assets.py
-python tools/export_plugin_config_assets.py delta_force_v2
+python tools/export_plugin_config_assets.py demo_plugin
 ```
 
 ## 共享基类
@@ -85,14 +85,6 @@ python tools/create_plugin_scaffold.py demo_plugin --description "示例插件" 
 - 插件目录和源码骨架
 - 示例配置
 - 配置结构说明
-
-## 参考插件
-
-当前可以参考：
-
-- `plugins/lol_ban/__init__.py`
-- `plugins/lol_fa8/__init__.py`
-- `plugins/delta_force_v2/__init__.py`
 
 ## 管理员命令
 

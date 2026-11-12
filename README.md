@@ -70,7 +70,7 @@ Docker 部署使用本仓库源码执行 `docker compose up -d --build`，以包
     <td width="50%" align="center">
       <strong>插件功能</strong>
       <br />
-      <sub>三角洲、LOL、Steam 等扩展查询</sub>
+      <sub>可自行开发和加载扩展插件</sub>
       <br /><br />
       <img src="docs/assets/readme/plugins.png" alt="插件功能" width="100%" />
     </td>
@@ -87,7 +87,7 @@ Docker 部署使用本仓库源码执行 `docker compose up -d --build`，以包
 | 频道管理 | 成员查询、身份组、禁言、禁麦、踢出、封禁管理 |
 | 自动管理 | 自动撤回、成员加入/退出通知 |
 | 提醒统计 | 定时提醒、活跃排行、频道统计、点歌排行、最近播放 |
-| 插件系统 | 支持目录化插件，已有三角洲、LOL、Steam 等插件 |
+| 插件系统 | 支持目录化插件，当前不预装业务插件 |
 | 管理后台 | 提供 `/admin` 页面，方便查看状态、改配置、控音乐 |
 | OneBot v11 | 可作为旁路服务接入 NoneBot、AstrBot、Hoshino 等外部程序 |
 
@@ -272,7 +272,6 @@ docker compose up -d --build
 | 音乐 | `@bot 播放 稻香`、`@bot 下一首`、`@bot 队列`、`@bot 随机` |
 | 提醒 | `@bot 提醒 30分钟后 开会`、`@bot 我的提醒` |
 | 管理 | `@bot 禁言 <用户> 5`、`@bot 解禁 <用户>`、`@bot 踢出 <用户>` |
-| 插件 | `@bot 三角洲帮助`、`@bot 战绩 区号 召唤师#编号`、`@bot steam 黑神话` |
 
 完整指令见 [机器人命令](docs/commands.md)。
 
@@ -280,14 +279,7 @@ docker compose up -d --build
 
 插件放在 `plugins/` 目录，推荐一个插件一个子目录。Bot 启动时会自动扫描加载。
 
-当前已有插件：
-
-- 三角洲行动查询、日报、周报、每日密码
-- LOL 封号查询
-- LOL 战绩查询
-- Steam 游戏价格查询和降价提醒
-- Apex Legends 战绩与游戏信息查询
-- ARC Raiders 物品与掉率查询
+当前版本不预装业务插件，保留插件框架、后台管理和开发脚手架。
 
 创建新插件：
 
