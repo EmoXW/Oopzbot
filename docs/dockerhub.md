@@ -46,3 +46,7 @@ Compose 会启动 Bot、Redis、网易云 API 和 Nginx。
 普通 push 和 pull request 只验证构建，不发布镜像。也可以在推送 main 的提交信息中显式添加 `[publish docker]` 触发发布。
 
 Apple 芯片 Mac 使用这些新标签时无需指定 `platform: linux/amd64`；如旧 Compose 强制指定了该平台，请移除此项才能选择 ARM64 原生镜像。旧的单架构固定版本标签保持不变。
+
+## 镜像体积
+
+镜像仅安装完整 Chromium（Playwright `--no-shell`），语音、图片渲染使用 `chromium` 通道，浏览器登录通过现有 `CHROME_BIN` 配置使用相同的完整 Chromium，不再额外安装 Headless Shell。浏览器依赖安装后在同一构建层清理 apt 索引；保留 Selenium 备用路径、字体与运行依赖。两个架构均验证普通页面及持久化登录上下文启动。

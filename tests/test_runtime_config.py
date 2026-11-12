@@ -137,12 +137,11 @@ class NginxCompatibilityConfigTest(unittest.TestCase):
 
 
 class DockerRuntimeConfigTest(unittest.TestCase):
-    def test_image_installs_both_chromium_variants_in_shared_path(self) -> None:
+    def test_image_installs_only_full_chromium_in_shared_path(self) -> None:
         content = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("PLAYWRIGHT_BROWSERS_PATH=/ms-playwright", content)
-        self.assertIn("playwright install --with-deps chromium", content)
-        self.assertNotIn("--no-shell", content)
+        self.assertIn("playwright install --with-deps --no-shell chromium", content)
         self.assertNotIn("PLAYWRIGHT_CHROMIUM_USE_HEADLESS_SHELL", content)
         self.assertIn('chmod -R a+rX "${PLAYWRIGHT_BROWSERS_PATH}"', content)
 
@@ -227,8 +226,8 @@ class DockerRuntimeConfigTest(unittest.TestCase):
         self.assertIn("Verify non-root Chromium runtime", workflow)
         self.assertIn('assert Path.home() == Path("/home/bot")', workflow)
         self.assertIn('probe.write_text(variable, encoding="utf-8")', workflow)
-        self.assertIn('(\"default-headless\", {})', workflow)
-        self.assertIn('(\"chromium-channel\", {\"channel\": \"chromium\"})', workflow)
+        self.assertIn('headless=True, channel="chromium"', workflow)
+        self.assertIn("launch_persistent_context", workflow)
         self.assertIn("Verify host bind-mount ownership override", workflow)
         self.assertIn('--build-arg BOT_UID="$host_uid"', workflow)
         self.assertIn("--build-arg BOT_GID=100", workflow)

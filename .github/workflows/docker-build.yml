@@ -102,21 +102,28 @@ jobs:
               probe.write_text(variable, encoding="utf-8")
               probe.unlink()
 
+          browser_root = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
+          assert not list(browser_root.glob("chromium_headless_shell-*"))
+          assert not list(Path("/var/lib/apt/lists").glob("*_Packages*"))
           with sync_playwright() as playwright:
-              launches = (
-                  ("default-headless", {}),
-                  ("chromium-channel", {"channel": "chromium"}),
+              browser = playwright.chromium.launch(
+                  headless=True, channel="chromium", args=VOICE_STREAM_ARGS,
               )
-              for name, options in launches:
-                  browser = playwright.chromium.launch(
-                      headless=True,
+              page = browser.new_page()
+              page.set_content("<title>chromium-channel</title>")
+              assert page.title() == "chromium-channel"
+              browser.close()
+              # The password-login flow uses a persistent browser context.
+              import tempfile
+              with tempfile.TemporaryDirectory() as profile:
+                  context = playwright.chromium.launch_persistent_context(
+                      profile, headless=True, executable_path=os.environ["CHROME_BIN"],
                       args=VOICE_STREAM_ARGS,
-                      **options,
                   )
-                  page = browser.new_page()
-                  page.set_content(f"<title>{name}</title>")
-                  assert page.title() == name
-                  browser.close()
+                  page = context.new_page()
+                  page.set_content("<title>persistent-login</title>")
+                  assert page.title() == "persistent-login"
+                  context.close()
           PY
 
       - name: Verify host bind-mount ownership override
