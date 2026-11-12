@@ -180,6 +180,8 @@ AUTO_RECALL_CONFIG = {
 # 默认轮询域管理日志接口；如需旧快照方案，可将 event_source 改为 member_snapshot
 AREA_JOIN_NOTIFY = {
     "enabled": False,
+    "join_message_enabled": True,  # 入域欢迎消息独立开关
+    "leave_message_enabled": True,  # 退域消息独立开关
     "event_source": "operate_logs",  # 成员事件来源：operate_logs=管理日志轮询；member_snapshot=成员列表快照对比
     "message_template": "欢迎 {name} 加入域～\n请阅读频道规则，祝你玩得开心！",  # 加入时消息，占位符: {name} {uid}；支持多行
     "message_template_leave": "{name} 已退出域",  # 退出时消息；留空("")则不在频道发提示，但 OneBot group_decrease 仍推送

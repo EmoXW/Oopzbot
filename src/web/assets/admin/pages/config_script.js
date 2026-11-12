@@ -635,6 +635,8 @@
       { id: "cfg_auto_recall_delay", path: "auto_recall.delay" },
 
       { id: "cfg_area_notify_enabled", path: "area_join_notify.enabled" },
+      { id: "cfg_notify_join_enabled", path: "area_join_notify.join_message_enabled", buildDefault: true },
+      { id: "cfg_notify_leave_enabled", path: "area_join_notify.leave_message_enabled", buildDefault: true },
       { id: "cfg_area_poll", path: "area_join_notify.poll_interval_seconds" },
       { id: "cfg_area_auto_role_id", path: "area_join_notify.auto_assign_role_id" },
       { id: "cfg_area_auto_role_name", path: "area_join_notify.auto_assign_role_name" },

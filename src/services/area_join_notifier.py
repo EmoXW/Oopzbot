@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Protocol
 
+import config as runtime_config
 from config import OOPZ_CONFIG
 from core.constants import build_mention
 from core.logger_config import get_logger
@@ -32,6 +33,11 @@ OPERATE_LOG_PERMISSION_DENIED_KEYWORDS = (
 )
 _JOIN_CONTENT = "\u52a0\u5165\u57df"
 _LEAVE_CONTENT = "\u9000\u51fa\u57df"
+
+
+def _member_message_enabled(action: str) -> bool:
+    settings = getattr(runtime_config, "AREA_JOIN_NOTIFY", {})
+    return bool(settings.get(f"{action}_message_enabled", True))
 
 
 class AreaMemberSnapshotSource(Protocol):
@@ -466,6 +472,8 @@ async def _run_join_poll_loop(
             area_cfg.auto_assign_role_name or auto_role_name,
         )
         await notify("join", area_id, uid)
+        if not _member_message_enabled("join"):
+            return
         if not channel:
             logger.warning("域成员欢迎跳过: 域 %s 未获取到文字频道 uid=%s", area_id[:8], uid[:8])
             return
@@ -486,7 +494,7 @@ async def _run_join_poll_loop(
     async def handle_leave(area_id: str, channel: str, uid: str, area_cfg) -> None:
         try:
             leave_msg = area_cfg.leave_message or message_template_leave
-            if leave_msg and channel:
+            if _member_message_enabled("leave") and leave_msg and channel:
                 name = await _resolve_display_name(sender, uid)
                 await sender.send_message(
                     leave_msg.format(name=name, uid=uid),
@@ -689,6 +697,8 @@ def make_ws_handler(
         registry = get_area_registry()
         configured = registry.get_all_area_ids()
         if configured and area not in configured:
+            return
+        if not _member_message_enabled(action):
             return
         channel = await resolve_channel(area)
         if not channel:

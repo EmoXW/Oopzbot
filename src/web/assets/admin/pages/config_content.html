@@ -94,7 +94,7 @@
               <div class="field-grid">
                 <div class="field field--check"><label><input id="cfg_auto_recall_enabled" type="checkbox" /> 启用自动撤回</label></div>
                 <div class="field"><label for="cfg_auto_recall_delay">自动撤回延迟（秒）</label><input id="cfg_auto_recall_delay" type="number" min="1" /></div>
-                <div class="field field--check"><label><input id="cfg_area_notify_enabled" type="checkbox" /> 启用区域加入通知</label></div>
+                <div class="field field--check"><label><input id="cfg_area_notify_enabled" type="checkbox" /> 启用域成员检测（总开关）</label></div>
                 <div class="field"><label for="cfg_area_poll">区域成员轮询间隔（秒）</label><input id="cfg_area_poll" type="number" min="2" /></div>
                 <div class="field"><label for="cfg_area_auto_role_id">新人自动分配身份组 ID</label><input id="cfg_area_auto_role_id" type="text" placeholder="留空不分配" /></div>
                 <div class="field"><label for="cfg_area_auto_role_name">或按名称匹配身份组</label><input id="cfg_area_auto_role_name" type="text" placeholder="优先使用 ID" /></div>
@@ -286,9 +286,11 @@
             <section id="section-notify-tpl" class="field-section">
               <div class="section-head">
                 <h3 class="section-title">通知模板</h3>
-                <p class="section-copy">进/退域消息模板，支持 {name} {uid} 占位符。</p>
+                <p class="section-copy">分别控制入域欢迎和退域消息，需启用域成员检测。关闭消息不影响成员事件和自动身份组。模板支持 {name} {uid}。</p>
               </div>
               <div class="field-grid">
+                <div class="field field--check"><label><input id="cfg_notify_join_enabled" type="checkbox" /> 发送入域欢迎消息</label></div>
+                <div class="field field--check"><label><input id="cfg_notify_leave_enabled" type="checkbox" /> 发送退域消息</label></div>
                 <div class="field field--wide"><label for="cfg_notify_join_tpl">入域消息模板</label><input id="cfg_notify_join_tpl" type="text" placeholder="欢迎 {name} 加入～" /></div>
                 <div class="field field--wide"><label for="cfg_notify_leave_tpl">退域消息模板</label><input id="cfg_notify_leave_tpl" type="text" placeholder="{name} 已退出域" /></div>
               </div>

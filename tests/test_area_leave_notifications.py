@@ -60,6 +60,41 @@ class LeaveNotificationTest(unittest.IsolatedAsyncioTestCase):
                 stop_event=stop,
             )
 
+    async def test_leave_switch_overrides_area_template_without_losing_callback(self):
+        self.registry.update_config("area-1", {"default_channel": "text-1", "leave_message": "区域退域消息"})
+        with patch.dict("services.area_join_notifier.runtime_config.AREA_JOIN_NOTIFY", {"leave_message_enabled": False}):
+            await self.run_poll()
+        self.sender.send_message.assert_not_awaited()
+        self.changed.assert_awaited_once_with("leave", "area-1", "u1")
+
+    async def test_join_switch_preserves_role_assignment_and_callback(self):
+        self.sender.get_area_members.side_effect = [
+            {"members": [{"uid": "bot"}]},
+            {"members": [{"uid": "bot"}, {"uid": "u1"}]},
+            {"members": [{"uid": "bot"}, {"uid": "u1"}]},
+        ]
+        with patch.dict("services.area_join_notifier.runtime_config.AREA_JOIN_NOTIFY", {"join_message_enabled": False}), patch(
+            "services.area_join_notifier._try_assign_role", new_callable=AsyncMock,
+        ) as assign:
+            await self.run_poll()
+        self.sender.send_message.assert_not_awaited()
+        self.changed.assert_awaited_once_with("join", "area-1", "u1")
+        assign.assert_awaited_once()
+
+    async def test_ws_switches_are_independent_and_follow_live_changes(self):
+        handler = make_ws_handler(self.sender, "欢迎 {name}", "再见 {name}")
+        with patch.dict("services.area_join_notifier.runtime_config.AREA_JOIN_NOTIFY", {
+            "join_message_enabled": False, "leave_message_enabled": True,
+        }) as settings:
+            await handler(99, {"body": {"area": "area-1", "person": "u1", "action": "join"}})
+            self.sender.send_message.assert_not_awaited()
+            await handler(99, {"body": {"area": "area-1", "person": "u1", "action": "leave"}})
+            self.sender.send_message.assert_awaited_once()
+            self.sender.send_message.reset_mock()
+            settings["leave_message_enabled"] = False
+            await handler(99, {"body": {"area": "area-1", "person": "u1", "action": "leave"}})
+            self.sender.send_message.assert_not_awaited()
+
     async def test_snapshot_leave_uses_global_template_and_cached_name_once(self):
         await self.run_poll()
         self.sender.send_message.assert_awaited_once_with(
