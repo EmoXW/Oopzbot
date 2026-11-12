@@ -327,3 +327,13 @@ Agora RTC (语音频道)
 | POST | `/api/control` | 播放控制（action: next/stop/pause/resume/seek/volume） |
 | POST | `/api/queue/action` | 队列操作（action: remove/top, index） |
 | POST | `/api/liked/refresh` | 刷新喜欢列表缓存 |
+
+### 历史插件兼容表
+
+以下表仍由核心数据库初始化代码保留，用于兼容旧数据，不代表预装或启用了业务插件。升级不会删除已有数据。
+
+| 表名 | 用途 | 字段 |
+|---|---|---|
+| `delta_force_active_token` | 三角洲插件的用户活跃账号组与 framework token | user_id, account_group, framework_token, updated_at |
+| `delta_force_place_push` | 三角洲特勤处推送订阅及上次快照 | user_id, channel_id, area_id, last_snapshot, updated_at |
+| `delta_force_daily_keyword_push` | 三角洲每日密码推送订阅及去重日期 | channel_id, area_id, last_push_date, updated_at |
