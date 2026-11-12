@@ -1,5 +1,6 @@
 from app.services.runtime import CommandRuntimeView
 from config import ADMIN_UIDS
+from domain.routing.plain_music_commands import plain_music_command
 from domain.routing.public_command_rules import (
     is_public_mention_text,
     is_public_slash_command,
@@ -49,4 +50,5 @@ class CommandAccessService:
                 return True
             return self._plugins.has_public_slash_command(command)
 
-        return False
+        text = plain_music_command(content)
+        return bool(text and is_public_mention_text(text))

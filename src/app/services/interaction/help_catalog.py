@@ -38,6 +38,7 @@ HELP_TOPICS: dict[str, HelpTopic] = {
         menu_label="音乐",
         menu_blurb="点歌、队列、喜欢列表",
         lines=(
+            "免@：播放 歌名 / b站 关键词 / 停止播放 / 下一首",
             "@bot 播放<歌名>  直接点歌",
             "@bot 搜歌<关键词>  返回候选歌曲，支持选择",
             "@bot 选歌 <编号>  播放最近一次搜歌结果",

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from app.services.runtime import CommandRuntimeView
 from core.constants import Msg
 from core.logger_config import get_logger
+from domain.routing.plain_music_commands import plain_music_command
 
 logger = get_logger("CommandMessageService")
 
@@ -36,7 +37,11 @@ class MessageContext:
         return bool(bot_mention and bot_mention in self.content)
 
     def is_command(self, bot_mention: str) -> bool:
-        return self.is_mention_command(bot_mention) or self.is_slash_command()
+        return (
+            self.is_mention_command(bot_mention)
+            or self.is_slash_command()
+            or bool(plain_music_command(self.content))
+        )
 
     def mention_text(self, bot_mention: str) -> str:
         if not self.is_mention_command(bot_mention):

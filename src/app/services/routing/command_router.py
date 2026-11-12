@@ -1,4 +1,5 @@
 from app.services.runtime import CommandRuntimeView
+from domain.routing.plain_music_commands import plain_music_command
 
 from .command_message_service import MessageContext
 
@@ -16,6 +17,16 @@ class CommandRouter:
 
         if ctx.is_slash_command():
             await self._route_slash(ctx)
+            return
+
+        text = plain_music_command(ctx.content)
+        if text:
+            await self._services.interaction.music.handle_mention(
+                text, ctx.channel, ctx.area, ctx.user,
+            )
+            await self._services.safety.recall_scheduler.schedule_user_message_recall(
+                ctx.message_id, ctx.channel, ctx.area, ctx.timestamp,
+            )
             return
 
         await self._route_chat(ctx)

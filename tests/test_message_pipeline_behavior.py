@@ -110,6 +110,17 @@ class CommandMessageServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(recent_messages[-1]["messageId"], "id-54")
 
 
+    async def test_plain_music_shortcuts_pass_through_permission_gate(self) -> None:
+        from app.services.routing.command_message_service import MessageContext
+
+        self.access.is_admin.return_value = False
+        self.access.is_public_command.return_value = False
+        ctx = MessageContext({}, "下一首", "c", "a", "u", "m", "t")
+        self.assertTrue(await self._build_service().reject_unauthorized_command(ctx))
+        self.sender.send_message.assert_awaited_once()
+        self.access.is_public_command.return_value = True
+        self.assertFalse(await self._build_service().reject_unauthorized_command(ctx))
+
     async def test_reject_unauthorized_command_sends_denial_message(self) -> None:
         from app.services.routing.command_message_service import MessageContext
 
@@ -133,12 +144,27 @@ class CommandMessageServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("[x]", self.sender.send_message.call_args.args[0])
 
 
+class PlainMusicCommandTest(unittest.TestCase):
+    def test_only_explicit_shortcuts_are_commands(self) -> None:
+        from app.services.routing.command_message_service import MessageContext
+        from domain.routing.plain_music_commands import plain_music_command
+
+        for text in ("播放", "播放   ", "播放量很多", "我想播放 稻香", "b站", "b站真好看", "下一首是什么", "停止播放了吗"):
+            with self.subTest(text=text):
+                self.assertEqual(plain_music_command(text), "")
+                self.assertFalse(MessageContext({}, text, "c", "a", "u", "m", "t").is_command("@bot"))
+        for text in ("播放 稻香", "b站 稻香", "停止播放", "下一首"):
+            self.assertTrue(MessageContext({}, text, "c", "a", "u", "m", "t").is_command("@bot"))
+
+
 class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.mention = Mock()
         self.mention.dispatch = AsyncMock(return_value=False)
         self.slash = Mock()
         self.slash.dispatch = AsyncMock(return_value=True)
+        self.music = Mock()
+        self.music.handle_mention = AsyncMock(return_value=True)
         self.chat = Mock()
         self.chat.handle_plain_chat = AsyncMock(return_value=True)
         self.recall_scheduler = Mock()
@@ -150,7 +176,7 @@ class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
             bot_mention="(met)bot(met)",
             services=SimpleNamespace(
                 routing=SimpleNamespace(mention=self.mention, slash=self.slash),
-                interaction=SimpleNamespace(chat=self.chat),
+                interaction=SimpleNamespace(chat=self.chat, music=self.music),
                 safety=SimpleNamespace(recall_scheduler=self.recall_scheduler),
             ),
         )
@@ -207,6 +233,25 @@ class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
             "area",
             "ts-1",
         )
+
+    async def test_plain_music_shortcuts_use_music_service_and_recall(self) -> None:
+        from app.services.routing.command_message_service import MessageContext
+
+        for content, normalized in (
+            ("播放 稻香", "播放 稻香"),
+            ("b站 稻香", "播放 b站:稻香"),
+            ("停止播放", "停止播放"),
+            ("下一首", "下一首"),
+        ):
+            with self.subTest(content=content):
+                ctx = MessageContext({}, content, "c", "a", "u", "m", "t")
+                await self._build_router().route(ctx)
+                self.music.handle_mention.assert_awaited_once_with(normalized, "c", "a", "u")
+                self.chat.handle_plain_chat.assert_not_awaited()
+                self.mention.dispatch.assert_not_awaited()
+                self.recall_scheduler.schedule_user_message_recall.assert_awaited_once_with("m", "c", "a", "t")
+                self.music.handle_mention.reset_mock()
+                self.recall_scheduler.schedule_user_message_recall.reset_mock()
 
     async def test_route_plain_chat_delegates_to_chat_service(self) -> None:
         from app.services.routing.command_message_service import MessageContext
