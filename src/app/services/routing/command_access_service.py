@@ -50,5 +50,8 @@ class CommandAccessService:
                 return True
             return self._plugins.has_public_slash_command(command)
 
+        if getattr(self._plugins, "matches_plain_command", lambda _: False)(content) is True:
+            return (not self._plugins.has_admin_only_mention_prefix(content)
+                    and self._plugins.has_public_mention_prefix(content))
         text = plain_music_command(content)
         return bool(text and is_public_mention_text(text))

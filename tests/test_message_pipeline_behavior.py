@@ -18,6 +18,7 @@ from app.services.runtime import CommandRuntimeView  # noqa: E402
 def _runtime(**components: object) -> CommandRuntimeView:
     """把用例所需的最小运行时切片标记为服务协议测试桩。"""
 
+    components.setdefault("plugins", SimpleNamespace(matches_plain_command=lambda _: False))
     return cast(CommandRuntimeView, SimpleNamespace(**components))
 
 

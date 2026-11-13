@@ -19,6 +19,13 @@ class CommandRouter:
             await self._route_slash(ctx)
             return
 
+        if getattr(self._runtime.plugins, "matches_plain_command", lambda _: False)(ctx.content) is True:
+            await self._services.routing.mention.dispatch(ctx.content, ctx.channel, ctx.area, ctx.user)
+            await self._services.safety.recall_scheduler.schedule_user_message_recall(
+                ctx.message_id, ctx.channel, ctx.area, ctx.timestamp,
+            )
+            return
+
         text = plain_music_command(ctx.content)
         if text:
             await self._services.interaction.music.handle_mention(

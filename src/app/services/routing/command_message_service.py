@@ -75,7 +75,8 @@ class CommandMessageService:
         )
 
     async def reject_unauthorized_command(self, ctx: MessageContext) -> bool:
-        if not ctx.is_command(self._bot_mention):
+        plain_plugin = getattr(self._runtime.plugins, "matches_plain_command", lambda _: False)(ctx.content) is True
+        if not ctx.is_command(self._bot_mention) and not plain_plugin:
             return False
 
         if (

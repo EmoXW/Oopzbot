@@ -53,6 +53,8 @@ class FooPlugin(PluginCommandMixin, BotModule):
 - `PluginConfig`
 - `PluginConfigSpec`
 
+插件需要免艾特入口时，在 `PluginCommandCapabilities` 声明 `plain_prefixes=("示例",)`，并同时在 `mention_prefixes` 声明同一前缀。只匹配完整前缀词及空白分隔的参数；复用 mention 处理器，保留原有公开/管理员权限。默认没有免艾特入口，卸载插件后入口随之移除。
+
 如果插件依赖私有辅助模块，例如 `plugins/demo_plugin/service.py`，建议声明 `private_modules`，方便卸载时清理模块缓存。
 
 ## 配置规范

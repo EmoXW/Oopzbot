@@ -90,6 +90,9 @@ class PluginRuntime:
     def has_public_mention_prefix(self, text: str) -> bool:
         return self._registry.has_public_mention_prefix(text)
 
+    def matches_plain_command(self, text: str) -> bool:
+        return self._registry.matches_plain_command(text)
+
     def has_public_slash_command(self, command: str) -> bool:
         return self._registry.has_public_slash_command(command)
 

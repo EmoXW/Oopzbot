@@ -71,6 +71,7 @@ class PluginRegistry:
             mention_prefixes=mention_prefixes,
             slash_commands=slash_commands,
             is_public_command=bool(capabilities.is_public_command),
+            plain_prefixes=tuple(p for p in capabilities.plain_prefixes if isinstance(p, str) and p and p in mention_prefixes),
         )
 
     @classmethod
@@ -205,6 +206,15 @@ class PluginRegistry:
                 continue
             if cmd in capabilities.slash_commands:
                 return True
+        return False
+
+    def matches_plain_command(self, text: str) -> bool:
+        text = text.strip()
+        for module in self._modules.values():
+            capabilities = self._get_command_capabilities(module)
+            for prefix in capabilities.plain_prefixes:
+                if text == prefix or (text.startswith(prefix) and text[len(prefix):len(prefix) + 1].isspace()):
+                    return True
         return False
 
     async def try_dispatch_mention(

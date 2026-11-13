@@ -58,6 +58,7 @@ class PluginCommandCapabilities:
     mention_prefixes: tuple[str, ...] = ()
     slash_commands: tuple[str, ...] = ()
     is_public_command: bool = True
+    plain_prefixes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
