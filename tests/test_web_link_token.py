@@ -49,6 +49,20 @@ class LastAccessTest(unittest.IsolatedAsyncioTestCase):
         web_link_token._memory_last_access = 0.0
         self.redis = _FakeRedis()
 
+    async def test_generated_link_token_uses_only_ascii_letters_and_digits(self):
+        first = await web_link_token.ensure_token(redis_client=self.redis, ttl_seconds=3600)
+        self.assertRegex(first, r"^[A-Za-z0-9]{25}$")
+        self.assertEqual(await web_link_token.ensure_token(redis_client=self.redis), first)
+        await clear_token(redis_client=self.redis)
+        second = await web_link_token.ensure_token(redis_client=self.redis)
+        self.assertRegex(second, r"^[A-Za-z0-9]{25}$")
+        self.assertNotEqual(first, second)
+
+    async def test_existing_link_token_remains_valid_until_rotated(self):
+        await set_token("existing-token_with-symbols", redis_client=self.redis)
+        self.assertEqual(await web_link_token.ensure_token(redis_client=self.redis),
+                         "existing-token_with-symbols")
+
     async def test_never_accessed_is_infinite(self) -> None:
         self.assertEqual(await seconds_since_access(redis_client=self.redis), float("inf"))
 

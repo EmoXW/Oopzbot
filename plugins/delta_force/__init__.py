@@ -1,6 +1,7 @@
 """三角洲插件：QQ / 微信登录及 WeGame 数据查询。"""
 import asyncio
 import contextlib
+import re
 import secrets
 import time
 from pathlib import Path
@@ -18,6 +19,7 @@ from domain.plugins.base import (
     PluginConfigSpec,
     PluginMetadata,
     parse_int,
+    parse_string_list,
     validate_range,
 )
 
@@ -35,6 +37,7 @@ HELP = """三角洲指令（可直接发送，也可 @机器人）：
 三角洲 每日密码 [地图]：无需登录，查询今日地图密码
 三角洲 统计 <赛季ID> [烽火/全面]：查询赛季统计
 三角洲 战绩 [烽火/全面] [1-20]：查询最近战绩
+三角洲 @某人 信息 / 战绩 / 统计 <赛季ID>：管理员代查已绑定账号
 三角洲 解绑：删除当前会话绑定
 三角洲 帮助：查看本说明
 登录链接和登录结果均通过私信发送。"""
@@ -94,7 +97,7 @@ class DeltaForce(BotModule):
 
     @property
     def metadata(self):
-        return PluginMetadata("delta_force", "三角洲扫码登录、角色、战绩与每日密码", "1.1.1", "EmoXW")
+        return PluginMetadata("delta_force", "三角洲扫码登录、角色、战绩与每日密码", "1.2.0", "EmoXW")
 
     @property
     def command_capabilities(self):
@@ -109,6 +112,9 @@ class DeltaForce(BotModule):
             PluginConfigField("api_key", "", description="API 后台生成的 Key"),
             PluginConfigField("api_secret", "", description="API 后台生成的 Secret，仅保存在机器人端"),
             PluginConfigField("daily_password_url", DEFAULT_URL, description="每日密码公开接口地址，不使用游戏 Key/Secret"),
+            PluginConfigField("admin_uids", [], cast=parse_string_list,
+                              validator=lambda uids: all(re.fullmatch(r"[A-Za-z0-9_-]{1,128}", uid) for uid in uids),
+                              description="代查管理员 UID（留空使用全局管理员，每行一个；填写后仅使用此列表）"),
             PluginConfigField("login_timeout", 300, cast=parse_int, validator=validate_range(30, 900), description="扫码等待上限，秒"),
             PluginConfigField("area", 36, cast=parse_int, validator=validate_range(1, 9999), description="游戏大区"),
         ))
@@ -204,6 +210,8 @@ class DeltaForce(BotModule):
 
     async def dispatch(self, args, user, channel, area):
         assert self.client is not None
+        query_user = user
+
         async def reply(text):
             await self.host.sender.send_message(text, channel=channel, area=area)
         if not user:
@@ -211,6 +219,17 @@ class DeltaForce(BotModule):
         if not args or args == ["帮助"]:
             await reply(HELP)
             return
+        target = re.match(r"^\(met\)([A-Za-z0-9_-]{1,128})\(met\)", args[0])
+        if target:
+            query_user = target[1]
+            if query_user != user and not self.is_query_admin(user):
+                raise ValueError("只有管理员可以查询其他人的三角洲信息和战绩。")
+            suffix = args[0][target.end():]
+            args = ([suffix] if suffix else []) + args[1:]
+            if any("(met)" in arg for arg in args):
+                raise ValueError("一次只能查询一位用户。")
+            if not args or args[0] not in ("信息", "战绩", "统计", "赛季", "赛季统计"):
+                raise ValueError("代查仅支持 信息、战绩和赛季统计，例如：三角洲 @某人 战绩。")
         action = args[0]
         if action in ("每日密码", "密码"):
             if len(args) > 2:
@@ -225,8 +244,10 @@ class DeltaForce(BotModule):
             await self.login(user, provider)
             await reply("三角洲登录链接已私信发送，请查看机器人私信。")
             return
-        binding = await self.binding(user)
+        binding = await self.binding(query_user)
         if not binding:
+            if query_user != user:
+                raise ValueError("该用户尚未绑定三角洲账号，请对方先发送 三角洲 登录 并完成扫码。")
             raise ValueError("请先发送 三角洲 登录，并在私信网页中扫码。")
         sid, provider = binding
         path_sid = quote(sid, safe="")
@@ -270,7 +291,12 @@ class DeltaForce(BotModule):
         else:
             await reply(HELP)
             return
-        data = await self.client.request("GET", f"/v1/sessions/{path_sid}/{endpoint}?" + urlencode(params), user)
+        try:
+            data = await self.client.request("GET", f"/v1/sessions/{path_sid}/{endpoint}?" + urlencode(params), query_user)
+        except APIError as exc:
+            if query_user != user and exc.status in (404, 410):
+                raise ValueError("该用户的三角洲登录会话已失效，请对方重新登录。") from None
+            raise
         if data.get("state") == "role_not_found":
             await reply("当前登录渠道和大区未查到三角洲角色，请确认 QQ/微信渠道及插件大区配置。")
             return
@@ -286,10 +312,25 @@ class DeltaForce(BotModule):
             if not value:
                 await reply("当前模式暂无战绩记录。")
                 return
+            from .formatters import game_nickname, record_text
+
+            role = await self.client.request(
+                "GET", f"/v1/sessions/{path_sid}/role?" + urlencode({"area": self.settings["area"]}), query_user,
+            )
+            if role.get("state") == "role_not_found" or role.get("result", {}).get("error_code", 0) != 0:
+                raise ValueError("无法获取游戏角色昵称，请稍后重试或重新登录。")
+            nickname = game_nickname(role.get("role_info"))
             for index, record in enumerate(value[:20], 1):
-                await reply(f"{title} · 第 {index} 场\n" + "\n".join(format_fields(record)))
+                await reply(f"{title} · 第 {index} 场\n" + record_text(record, params["queue"], nickname))
         else:
             await reply(title + "\n" + ("\n".join(format_fields(value)) or "当前暂无可展示的数据。"))
+
+    def is_query_admin(self, user):
+        import config
+
+        configured = self.settings.get("admin_uids") or []
+        admins = configured if configured else getattr(config, "ADMIN_UIDS", ())
+        return user in admins
 
     async def login(self, user, provider):
         assert self.client is not None

@@ -41,6 +41,7 @@ class DeltaTests(unittest.IsolatedAsyncioTestCase):
         self.next_state = 'pending'
         self.daily_count = 0
         self.role_data = {'name': '测试角色', 'level': 42}
+        self.records_data = []
         today = datetime.now(TZ)
         self.daily_data = {'status': 'success', 'data': {
             'last_updated': today.isoformat(), 'update_date': today.strftime('%m月%d日每日密码已更新'),
@@ -107,11 +108,44 @@ class DeltaTests(unittest.IsolatedAsyncioTestCase):
         if request.path.endswith('/report'):
             return web.json_response({'result': {'error_code': 0}, 'season': {'kills': 12}})
         if request.path.endswith('/records'):
-            return web.json_response({'result': {'error_code': 0}, 'sols': [], 'tdms': []})
+            return web.json_response({'result': {'error_code': 0}, 'sols': self.records_data, 'tdms': self.records_data})
         return web.json_response({'state': self.states[sid], 'session_id': sid, 'provider': 'qq'})
 
     async def command(self, text, user='user-a'):
         return await self.plugin.handle_mention(text, 'channel', 'area', user, self.host)
+
+    async def test_admin_queries_target_owner_and_real_game_nickname(self):
+        self.owners['bound'] = 'user-b'
+        await self.plugin.save_binding('user-b', 'bound', 'qq')
+        self.records_data = [{'playerId': '6454372124981955472', 'name': '',
+                              'gameResult': 1, 'gainedPrice': 183435, 'ProfitLoss': -551904,
+                              'gameTime': 192, 'killPlayer': 1}]
+        with patch('config.ADMIN_UIDS', ['user-a']):
+            await self.command('三角洲 (met)user-b(met) 信息')
+            self.assertIn('角色名：测试角色', self.sender.send_message.await_args.args[0])
+            await self.command('三角洲 (met)user-b(met)战绩')
+        text = self.sender.send_message.await_args.args[0]
+        self.assertIn('角色名：测试角色', text)
+        self.assertIn('撤离失败', text)
+        self.assertIn('3分12秒', text)
+        self.assertIn('-551,904', text)
+        self.assertNotIn('playerId', text)
+        self.assertNotIn('6454372124981955472', text)
+        self.assertTrue(all(request[2] == 'user-b' for request in self.requests))
+        self.assertEqual(sum(request[1].endswith('/role') for request in self.requests), 2)
+
+    async def test_proxy_permission_fallback_override_and_read_only(self):
+        with patch('config.ADMIN_UIDS', ['user-a']):
+            self.assertTrue(self.plugin.is_query_admin('user-a'))
+            self.plugin.settings['admin_uids'] = ['custom']
+            self.assertFalse(self.plugin.is_query_admin('user-a'))
+            self.assertTrue(self.plugin.is_query_admin('custom'))
+            await self.command('三角洲 (met)user-b(met) 信息')
+            self.assertIn('只有管理员', self.sender.send_message.await_args.args[0])
+            self.plugin.settings['admin_uids'] = []
+            for action in ('解绑', '登录', '状态', '(met)user-c(met) 信息'):
+                await self.command('三角洲 (met)user-b(met) ' + action)
+            self.assertEqual(self.requests, [])
 
     async def test_default_qq_login_page_and_success_notification(self):
         self.next_state = 'authenticated'

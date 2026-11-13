@@ -34,6 +34,14 @@
       "example": "https://www.tmini.net/api/sjzmm?type=json"
     },
     {
+      "name": "admin_uids",
+      "type": "string[]",
+      "required": false,
+      "description": "代查管理员 UID（留空使用全局管理员，每行一个；填写后仅使用此列表）",
+      "default": [],
+      "example": []
+    },
+    {
       "name": "login_timeout",
       "type": "integer",
       "required": false,

@@ -3,6 +3,7 @@
   "api_key": "",
   "api_secret": "",
   "daily_password_url": "https://www.tmini.net/api/sjzmm?type=json",
+  "admin_uids": [],
   "login_timeout": 300,
   "area": 36
 }

@@ -1,5 +1,6 @@
 import math
 import secrets
+import string
 import threading
 import time
 
@@ -108,7 +109,9 @@ async def ensure_token(redis_client=None, ttl_seconds=None) -> str:
         if redis_client is not None and ttl > 0:
             await set_token(token, redis_client=redis_client, ttl_seconds=ttl)
         return token
-    token = secrets.token_urlsafe(18)
+    # 25 base-62 characters provide over 148 bits of entropy.
+    alphabet = string.ascii_letters + string.digits
+    token = "".join(secrets.choice(alphabet) for _ in range(25))
     await set_token(token, redis_client=redis_client, ttl_seconds=ttl)
     return token
 
