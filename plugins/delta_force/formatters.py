@@ -56,7 +56,7 @@ def record_text(data, queue, nickname):
     results = {0: "撤离成功", 1: "撤离失败"} if queue == "sol" else {0: "失败", 1: "胜利", 2: "平局"}
     result = data.get(result_key)
     lines.append("模式：" + ("烽火地带" if queue == "sol" else "全面战场"))
-    lines.append("结果：" + results.get(result, "暂缺"))
+    lines.append("结果：" + (results.get(result, "暂缺") if isinstance(result, int) else "暂缺"))
     for key in ("mapName", "map_name"):
         if data.get(key):
             lines.append(f"地图：{clean(data[key])}")
