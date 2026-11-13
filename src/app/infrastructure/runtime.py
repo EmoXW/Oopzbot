@@ -1,7 +1,10 @@
 import asyncio
 import json
 import os
+import shutil
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 from core.constants import PLUGINS_DIR_NAME
 from core.logger_config import get_logger
@@ -65,6 +68,7 @@ class PluginRuntime:
     """插件注册、查询和动态装卸的运行时门面。"""
 
     def __init__(self, plugins_dir: str = PLUGINS_DIR_NAME, state_path=None):
+        self._mutation_lock = asyncio.Lock()
         self._plugins_dir = plugins_dir
         self._registry = PluginRegistry()
         self._state_path = os.fspath(state_path) if state_path else _DEFAULT_PLUGIN_STATE_PATH
@@ -148,6 +152,10 @@ class PluginRuntime:
             return str(exc)
 
     async def load(self, plugin_name: str, handler=None) -> PluginOperationResult:
+        async with self._mutation_lock:
+            return await self._load(plugin_name, handler)
+
+    async def _load(self, plugin_name: str, handler=None) -> PluginOperationResult:
         result = await load_plugin(self._registry, plugin_name, self._plugins_dir, handler=handler)
         if not result.ok:
             return result
@@ -161,6 +169,10 @@ class PluginRuntime:
         return result
 
     async def unload(self, plugin_name: str, handler=None) -> PluginOperationResult:
+        async with self._mutation_lock:
+            return await self._unload(plugin_name, handler)
+
+    async def _unload(self, plugin_name: str, handler=None) -> PluginOperationResult:
         result = await unload_plugin(self._registry, plugin_name, handler=handler)
         if not result.ok:
             return result
@@ -174,7 +186,90 @@ class PluginRuntime:
         return result
 
     async def reload_config(self, plugin_name: str, handler=None) -> PluginOperationResult:
+        async with self._mutation_lock:
+            return await self._reload_config(plugin_name, handler)
+
+    async def _reload_config(self, plugin_name: str, handler=None) -> PluginOperationResult:
         return await reload_plugin_config(self._registry, plugin_name, handler=handler)
+
+    async def reload_code(self, plugin_name: str, handler=None) -> PluginOperationResult:
+        from .plugin_runtime.package_store import validate_name
+
+        validate_name(plugin_name)
+        async with self._mutation_lock:
+            if self.registry.is_builtin(plugin_name):
+                return PluginOperationResult.failure("内置模块不能热更新")
+            if self.registry.get(plugin_name):
+                result = await self._unload(plugin_name, handler)
+                if not result.ok:
+                    return result
+            self._clear_plugin_cache(plugin_name)
+            return await self._load(plugin_name, handler)
+
+    def _clear_plugin_cache(self, plugin_name: str) -> None:
+        from .plugin_runtime import loader
+        from .plugin_runtime.module_tools import plugin_file_path
+
+        prefix = f"plugins.{plugin_name}"
+        for key in tuple(sys.modules):
+            if key == prefix or key.startswith(prefix + "."):
+                sys.modules.pop(key, None)
+        directory = Path(plugin_file_path(plugin_name, self._plugins_dir, loader._PROJECT_ROOT)).parent
+        for cache in directory.rglob("__pycache__"):
+            shutil.rmtree(cache, ignore_errors=True)
+
+    async def install_zip(self, payload: bytes, name: str = "", activate: bool = True, overwrite: bool = False, handler=None) -> PluginOperationResult:
+        from .plugin_runtime.package_store import (
+            plugin_upload_root,
+            replace_package,
+            restore_package,
+            stage_package,
+        )
+
+        async with self._mutation_lock:
+            plugin_name, stage = await asyncio.to_thread(stage_package, payload, name)
+            backup = None
+            replaced = False
+            was_loaded = self.registry.get(plugin_name) is not None
+            try:
+                if (plugin_name in self.discover() or (plugin_upload_root() / plugin_name).exists()) and not overwrite:
+                    return PluginOperationResult.failure("同名插件已存在，请勾选允许替换", plugin_name=plugin_name)
+                if self.registry.is_builtin(plugin_name):
+                    return PluginOperationResult.failure("内置模块不能被 ZIP 覆盖")
+                if was_loaded:
+                    result = await self._unload(plugin_name, handler)
+                    if not result.ok:
+                        return result
+                backup = await asyncio.to_thread(replace_package, plugin_name, stage)
+                replaced = True
+                self._clear_plugin_cache(plugin_name)
+                if activate or was_loaded:
+                    result = await self._load(plugin_name, handler)
+                    if not result.ok:
+                        raise ValueError(result.message)
+                error = await asyncio.to_thread(self._persist_enabled_plugins_sync)
+                if error:
+                    raise ValueError(f"启用状态保存失败: {error}")
+                if backup:
+                    await asyncio.to_thread(shutil.rmtree, backup, True)
+                return PluginOperationResult.success(
+                    f"插件 {plugin_name} 已保存" + ("并加载最新代码" if activate or was_loaded else "，可在列表中加载"),
+                    plugin_name=plugin_name,
+                )
+            except Exception as exc:
+                if replaced:
+                    if self.registry.get(plugin_name):
+                        await self._unload(plugin_name, handler)
+                    await asyncio.to_thread(restore_package, plugin_name, backup)
+                    self._clear_plugin_cache(plugin_name)
+                    if was_loaded:
+                        recovered = await self._load(plugin_name, handler)
+                        if not recovered.ok:
+                            return PluginOperationResult.failure(f"更新失败，旧文件已恢复但重新加载失败: {recovered.message}")
+                return PluginOperationResult.failure(f"安装失败，原版本已保留: {exc}", plugin_name=plugin_name)
+            finally:
+                if stage.exists():
+                    await asyncio.to_thread(shutil.rmtree, stage, True)
 
     async def stop(self, timeout: float = 5.0) -> None:
         """在调用方预算内停止全部插件，不改写下次启用状态。"""

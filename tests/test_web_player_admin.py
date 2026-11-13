@@ -149,6 +149,58 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_plugin_upload_and_code_reload_require_login(self) -> None:
+        with patch.object(self.module, "_admin_enabled", return_value=True):
+            for path in ("/admin/api/plugins/upload", "/admin/api/plugins/demo/reload-code"):
+                with self.subTest(path=path):
+                    self.assertEqual(self.client.post(path).status_code, 401)
+
+    def test_plugin_zip_upload_validates_request_and_awaits_install(self) -> None:
+        import web.admin.plugins as plugin_routes
+
+        operation = AsyncMock(return_value=PluginOperationResult.success("已保存", plugin_name="demo"))
+        host = SimpleNamespace()
+        with (
+            patch.object(self.module, "_admin_enabled", return_value=True),
+            patch.object(self.module, "_is_admin_authorized", return_value=True),
+            patch.object(plugin_routes, "_get_plugin_runtime", return_value=SimpleNamespace(install_zip=operation)),
+            patch.object(plugin_routes, "_get_plugin_host", return_value=host),
+        ):
+            self.assertEqual(self.client.post("/admin/api/plugins/upload", content=b"zip").status_code, 415)
+            self.assertEqual(self.client.post(
+                "/admin/api/plugins/upload", content=b"zip",
+                headers={"content-type": "application/zip", "origin": "https://other.example"},
+            ).status_code, 403)
+            with patch("app.infrastructure.plugin_runtime.package_store.MAX_UPLOAD", 2):
+                self.assertEqual(self.client.post(
+                    "/admin/api/plugins/upload", content=b"zip",
+                    headers={"content-type": "application/zip"},
+                ).status_code, 413)
+            operation.assert_not_awaited()
+            response = self.client.post(
+                "/admin/api/plugins/upload?name=demo&activate=false&overwrite=true",
+                content=b"zip", headers={"content-type": "application/zip", "origin": "http://testserver"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        operation.assert_awaited_once_with(b"zip", name="demo", activate=False, overwrite=True, handler=host)
+
+    def test_plugin_code_reload_awaits_runtime(self) -> None:
+        import web.admin.plugins as plugin_routes
+
+        operation = AsyncMock(return_value=PluginOperationResult.success("已重载", plugin_name="demo"))
+        host = SimpleNamespace()
+        with (
+            patch.object(self.module, "_admin_enabled", return_value=True),
+            patch.object(self.module, "_is_admin_authorized", return_value=True),
+            patch.object(plugin_routes, "_get_plugin_runtime", return_value=SimpleNamespace(reload_code=operation)),
+            patch.object(plugin_routes, "_get_plugin_host", return_value=host),
+        ):
+            response = self.client.post("/admin/api/plugins/demo/reload-code")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        operation.assert_awaited_once_with("demo", handler=host)
+
     def test_removed_screen_sharing_routes_are_unavailable(self) -> None:
         with (
             patch.object(self.module, "_admin_enabled", return_value=True),

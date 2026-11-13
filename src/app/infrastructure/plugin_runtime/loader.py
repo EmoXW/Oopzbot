@@ -151,6 +151,8 @@ async def load_plugin(
 
     try:
         instance = plugin_class()
+        if instance.metadata.name != plugin_name:
+            raise ValueError("插件 metadata.name 必须与插件目录名一致")
         config = instance.config_spec.apply(load_plugin_config(plugin_name))
         if not await registry.register(instance, builtin=False):
             sys.modules.pop(module_name, None)
@@ -285,7 +287,10 @@ async def unload_plugin(
 
     private_modules = tuple(getattr(module, "private_modules", ()) or ())
     await registry.unregister(plugin_name, handler)
-    sys.modules.pop(f"plugins.{plugin_name}", None)
+    prefix = f"plugins.{plugin_name}"
+    for loaded_name in tuple(sys.modules):
+        if loaded_name == prefix or loaded_name.startswith(prefix + "."):
+            sys.modules.pop(loaded_name, None)
     for mod_name in private_modules:
         if isinstance(mod_name, str) and mod_name:
             sys.modules.pop(mod_name, None)

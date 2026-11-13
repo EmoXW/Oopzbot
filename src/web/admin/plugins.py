@@ -1,5 +1,6 @@
 import json
 import os
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -58,6 +59,45 @@ def _validate_plugin_name(name: str) -> str | JSONResponse:
             status_code=400,
         )
     return normalized
+
+
+@router.post("/admin/api/plugins/upload")
+async def admin_plugin_upload(request: Request, name: str = "", activate: bool = True, overwrite: bool = False):
+    from app.infrastructure.plugin_runtime.package_store import MAX_UPLOAD
+
+    origin = request.headers.get("origin")
+    if origin and urlsplit(origin).netloc != request.headers.get("host"):
+        return JSONResponse({"ok": False, "error": "请从当前后台页面上传"}, status_code=403)
+    if request.headers.get("content-type", "").split(";")[0] != "application/zip":
+        return JSONResponse({"ok": False, "error": "请选择 ZIP 插件包"}, status_code=415)
+    runtime = _get_plugin_runtime()
+    if not runtime:
+        return JSONResponse({"ok": False, "error": "插件运行时未初始化"}, status_code=503)
+    payload = bytearray()
+    async for chunk in request.stream():
+        payload.extend(chunk)
+        if len(payload) > MAX_UPLOAD:
+            return JSONResponse({"ok": False, "error": "ZIP 不能超过 20 MiB"}, status_code=413)
+    try:
+        result = await runtime.install_zip(bytes(payload), name=name, activate=activate, overwrite=overwrite, handler=_get_plugin_host())
+    except ValueError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    return JSONResponse({"ok": result.ok, "message": result.message, "error": "" if result.ok else result.message, "name": result.plugin_name}, status_code=200 if result.ok else 400)
+
+
+@router.post("/admin/api/plugins/{name}/reload-code")
+async def admin_plugin_reload_code(name: str):
+    plugin_name = _validate_plugin_name(name)
+    if isinstance(plugin_name, JSONResponse):
+        return plugin_name
+    runtime = _get_plugin_runtime()
+    if not runtime:
+        return JSONResponse({"ok": False, "error": "插件运行时未初始化"}, status_code=503)
+    try:
+        result = await runtime.reload_code(plugin_name, handler=_get_plugin_host())
+    except ValueError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    return JSONResponse({"ok": result.ok, "message": result.message, "error": "" if result.ok else result.message})
 
 
 @router.post("/admin/api/plugins/{name}/load")
@@ -125,8 +165,16 @@ def admin_plugin_config_get(name: str):
         except Exception as exc:
             return JSONResponse({"ok": False, "error": f"读取配置失败: {exc}"})
 
+    runtime = _get_plugin_runtime()
+    registry = getattr(runtime, "registry", None)
+    loaded = registry.get(plugin_name) if registry else None
+    if loaded:
+        if not config_data:
+            config_data = loaded.config_spec.to_example()
+        schema_data = loaded.config_spec.to_schema(plugin_name) if hasattr(loaded.config_spec, "to_schema") else None
+    else:
+        schema_data = None
     schema_path = plugin_config_schema_path(plugin_name, DEFAULT_PLUGIN_CONFIG_DIR)
-    schema_data = None
     if os.path.isfile(schema_path):
         try:
             with open(schema_path, encoding="utf-8") as f:

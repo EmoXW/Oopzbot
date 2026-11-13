@@ -159,3 +159,22 @@ python -m unittest tests.test_plugin_config_layout tests.test_plugin_runtime_sta
 
 当前仓库里的插件已经按“一插件一目录”的方式收口。
 后续新增插件，建议默认遵守这份文档，而不是继续复制历史插件文件再手工删改。
+
+## 后台上传 ZIP 与代码热重载
+
+管理员登录后台“插件”页面，可上传最大 20 MiB 的 ZIP。推荐包结构：
+
+```text
+hello.zip
+└── hello/
+    ├── __init__.py
+    └── service.py
+```
+
+`metadata.name` 必须等于目录名 `hello`；也支持 ZIP 根目录直接放 `__init__.py`，此时在上传表单填写插件名。包只能包含一个插件，最多 512 个条目，解压总量不超过 50 MiB。禁止路径越界、符号链接和加密文件。插件是 Python 可执行代码，应只上传可信来源；依赖需预先安装，后台不会运行 pip 或安装脚本。
+
+上传代码持久化到 `data/plugins/<插件名>/`。当前 Docker 部署映射为宿主机 `botdata/data/plugins/<插件名>/`，无需挂载整个 `/app/plugins`，不会遮蔽框架共享代码。账号配置仍放在 `config/plugins/<插件名>/config.json`，更新 ZIP 不覆盖此文件。
+
+上传后可选择立即加载。更新需勾选“允许替换同名插件”，已加载插件会先卸载、再加载新代码，失败恢复旧文件并尝试重新加载旧版本。“重载代码”重新导入插件和辅助模块；“重载配置”仅更新配置，不重新导入代码。加载状态保存后，重启容器自动恢复。
+
+管理员接口：`POST /admin/api/plugins/upload?name=hello&activate=true&overwrite=false`，请求体为 ZIP 原始字节，Content-Type 为 `application/zip`；`POST /admin/api/plugins/hello/reload-code` 热重载已落盘代码。两者沿用后台登录鉴权。

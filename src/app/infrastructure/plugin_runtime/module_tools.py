@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import os
 import sys
@@ -24,6 +25,10 @@ def plugin_file_path(
     project_root: str = PROJECT_ROOT,
 ) -> str:
     """返回插件源码文件路径。"""
+    if plugins_dir == PLUGINS_DIR_NAME:
+        external = os.path.join(project_root, "data", "plugins", plugin_name, "__init__.py")
+        if os.path.isfile(external):
+            return external
     plugins_path = os.path.join(project_root, plugins_dir)
     flat_path = os.path.join(plugins_path, f"{plugin_name}.py")
     if os.path.isfile(flat_path):
@@ -37,11 +42,8 @@ def discover_plugin_names(
 ) -> list[str]:
     """扫描目录中的插件名。"""
     path = os.path.join(project_root, plugins_dir)
-    if not os.path.isdir(path):
-        return []
-
     names: list[str] = []
-    for name in sorted(os.listdir(path)):
+    for name in sorted(os.listdir(path)) if os.path.isdir(path) else []:
         if name.startswith("_"):
             continue
         item_path = os.path.join(path, name)
@@ -50,7 +52,13 @@ def discover_plugin_names(
             continue
         if os.path.isdir(item_path) and os.path.isfile(os.path.join(item_path, "__init__.py")):
             names.append(name)
-    return names
+    if plugins_dir == PLUGINS_DIR_NAME:
+        external = os.path.join(project_root, "data", "plugins")
+        if os.path.isdir(external):
+            names += [name for name in os.listdir(external)
+                      if not name.startswith(("_", "."))
+                      and os.path.isfile(os.path.join(external, name, "__init__.py"))]
+    return sorted(set(names))
 
 
 def load_plugin_module(
@@ -72,6 +80,7 @@ def load_plugin_module(
     if not spec or not spec.loader:
         raise ImportError(f"无法创建模块 spec: {plugin_name}")
 
+    importlib.invalidate_caches()
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     try:

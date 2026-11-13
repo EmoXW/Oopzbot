@@ -14,6 +14,20 @@
           </div>
         </article>
 
+        <article class="surface-card">
+          <div class="section-head"><h3 class="section-title">上传插件 ZIP</h3>
+            <p class="section-copy">插件运行权限与机器人相同，请仅上传可信代码。ZIP 包含一个插件目录及 __init__.py；最大 20 MiB。</p></div>
+          <div class="field-grid">
+            <div class="field"><label for="pluginZip">插件压缩包</label><input id="pluginZip" type="file" accept=".zip,application/zip" /></div>
+            <div class="field"><label for="pluginZipName">插件目录名（ZIP 根目录直接放入口时必填）</label><input id="pluginZipName" placeholder="例如 hello，与 metadata.name 一致" /></div>
+            <div class="field field--check"><label><input id="pluginZipActivate" type="checkbox" checked /> 上传后加载 / 热更新</label></div>
+            <div class="field field--check"><label><input id="pluginZipOverwrite" type="checkbox" /> 允许替换同名插件（保留配置）</label></div>
+          </div>
+          <div class="action-row"><button id="pluginZipButton" class="btn btn-primary" type="button" data-action="upload-plugin">上传 ZIP</button></div>
+          <div id="pluginUploadMsg" class="msg" role="status" aria-live="polite"></div>
+          <p class="section-copy">代码保存到 data 挂载目录下的 plugins/，更新失败会恢复原版本。依赖需由运行环境预先提供，不自动安装。</p>
+        </article>
+
         <!-- 已加载插件表格 -->
         <article class="table-card">
           <div class="section-head">

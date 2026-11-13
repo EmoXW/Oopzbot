@@ -39,6 +39,7 @@
             if (!p.builtin) {
               actions.push('<button class="btn btn-danger" type="button" data-action="unload-plugin" data-name="' + esc(p.name) + '">卸载</button>');
             }
+            if (!p.builtin) actions.push('<button class="btn btn-ghost" type="button" data-action="reload-code" data-name="' + esc(p.name) + '">重载代码</button>');
             actions.push('<button class="btn btn-ghost" type="button" data-action="reload-config" data-name="' + esc(p.name) + '">重载配置</button>');
             actions.push('<button class="btn btn-ghost" type="button" data-action="open-config-editor" data-name="' + esc(p.name) + '">编辑配置</button>');
 
@@ -110,11 +111,54 @@
       }
     }
 
+    async function uploadPlugin() {
+      const file = AdminShell.byId("pluginZip").files[0];
+      if (!file || !file.name.toLowerCase().endsWith(".zip")) {
+        AdminShell.showMessage("pluginUploadMsg", "请选择 ZIP 文件", true); return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        AdminShell.showMessage("pluginUploadMsg", "ZIP 不能超过 20 MiB", true); return;
+      }
+      const button = AdminShell.byId("pluginZipButton");
+      button.disabled = true;
+      AdminShell.showMessage("pluginUploadMsg", "正在上传并验证插件…");
+      const params = new URLSearchParams({
+        name: AdminShell.byId("pluginZipName").value.trim(),
+        activate: String(AdminShell.byId("pluginZipActivate").checked),
+        overwrite: String(AdminShell.byId("pluginZipOverwrite").checked),
+      });
+      try {
+        const response = await fetch("/admin/api/plugins/upload?" + params.toString(), {
+          method: "POST", credentials: "include", headers: { "Content-Type": "application/zip" }, body: file,
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.error || "上传失败");
+        AdminShell.showMessage("pluginUploadMsg", data.message);
+        AdminShell.byId("pluginZip").value = "";
+        await loadPlugins();
+      } catch (error) {
+        AdminShell.showMessage("pluginUploadMsg", error.message, true);
+      } finally { button.disabled = false; }
+    }
+
+    async function reloadCode(name) {
+      try {
+        const data = await AdminShell.req("/admin/api/plugins/" + encodeURIComponent(name) + "/reload-code", { method: "POST", body: "{}" });
+        setState(data.message, "success");
+        await loadPlugins();
+      } catch (error) { setState("代码重载失败: " + error.message, "error"); }
+    }
+
     // ---- Config editor ----
 
     function normalizeSchema(schema) {
       if (!schema || typeof schema !== "object") {
         return {};
+      }
+      if (Array.isArray(schema.fields)) {
+        const properties = {};
+        schema.fields.forEach(function (field) { properties[field.name] = { ...field, title: field.description || field.name }; });
+        return { type: "object", properties: properties };
       }
       if (Array.isArray(schema.allOf)) {
         return schema.allOf.reduce(function (merged, item) {
@@ -403,6 +447,8 @@
 
     AdminShell.registerActions({
       "refresh-plugins": () => loadPlugins(),
+      "upload-plugin": () => uploadPlugin(),
+      "reload-code": (el) => reloadCode(el.dataset.name),
       "load-plugin": (el) => loadPlugin(el.dataset.name),
       "unload-plugin": (el) => unloadPlugin(el.dataset.name),
       "reload-config": (el) => reloadConfig(el.dataset.name),
