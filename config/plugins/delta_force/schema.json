@@ -1,0 +1,53 @@
+{
+  "plugin_name": "delta_force",
+  "fields": [
+    {
+      "name": "api_base_url",
+      "type": "string",
+      "required": false,
+      "description": "API 地址，Docker Desktop 访问宿主机用 host.docker.internal",
+      "default": "http://host.docker.internal:8765",
+      "example": "http://host.docker.internal:8765"
+    },
+    {
+      "name": "api_key",
+      "type": "string",
+      "required": false,
+      "description": "API 后台生成的 Key",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "api_secret",
+      "type": "string",
+      "required": false,
+      "description": "API 后台生成的 Secret，仅保存在机器人端",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "daily_password_url",
+      "type": "string",
+      "required": false,
+      "description": "每日密码公开接口地址，不使用游戏 Key/Secret",
+      "default": "https://www.tmini.net/api/sjzmm?type=json",
+      "example": "https://www.tmini.net/api/sjzmm?type=json"
+    },
+    {
+      "name": "login_timeout",
+      "type": "integer",
+      "required": false,
+      "description": "扫码等待上限，秒",
+      "default": 300,
+      "example": 300
+    },
+    {
+      "name": "area",
+      "type": "integer",
+      "required": false,
+      "description": "游戏大区",
+      "default": 36,
+      "example": 36
+    }
+  ]
+}
