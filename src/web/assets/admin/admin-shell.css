@@ -1273,6 +1273,11 @@ select.select--compact {
 
 .m-modal {
   position: fixed;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -46%) scale(0.95);
@@ -1301,6 +1306,7 @@ select.select--compact {
 }
 
 .m-modal__head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1337,6 +1343,9 @@ select.select--compact {
 }
 
 .m-modal__body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 20px 24px;
 }
 
@@ -1345,6 +1354,7 @@ select.select--compact {
 }
 
 .m-modal__foot {
+  flex-shrink: 0;
   padding: 0 24px 20px;
   display: flex;
   gap: 8px;
