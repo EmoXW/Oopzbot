@@ -1,4 +1,5 @@
 import datetime
+import time
 
 from app.services.runtime import CommandRuntimeView, sender_of
 from core.constants import Msg
@@ -41,13 +42,14 @@ class RoleService:
 
         text_mute = data.get("disableTextTo", 0)
         voice_mute = data.get("disableVoiceTo", 0)
-        if text_mute and text_mute > 0:
+        now_ms = int(time.time() * 1000)
+        if text_mute and text_mute > now_ms:
             end = datetime.datetime.fromtimestamp(text_mute / 1000).strftime("%Y-%m-%d %H:%M")
             lines.append(f"  禁言至: {end}")
         else:
             lines.append("  禁言: 无")
 
-        if voice_mute and voice_mute > 0:
+        if voice_mute and voice_mute > now_ms:
             end = datetime.datetime.fromtimestamp(voice_mute / 1000).strftime("%Y-%m-%d %H:%M")
             lines.append(f"  禁麦至: {end}")
         else:

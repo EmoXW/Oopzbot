@@ -813,8 +813,9 @@ class MusicHandler(PlaybackMixin):
             await self.sender.send_message("你的喜欢列表为空", channel=channel, area=area)
             return
 
-        count = min(count, 20, len(liked_ids))
-        selected = random.sample(liked_ids, count)
+        count = max(1, min(count, 20, len(liked_ids)))
+        # 抽取额外候选，遇到试听、版权限制或取链接失败时继续尝试，避免一首失败就结束。
+        selected = random.sample(liked_ids, min(len(liked_ids), count + 5))
 
         success_count = 0
         first_text = None
@@ -838,15 +839,20 @@ class MusicHandler(PlaybackMixin):
                 await self._get_queue(area).add_to_queue(song_data)
 
             success_count += 1
+            if success_count >= count:
+                break
 
         if success_count == 0:
-            await self.sender.send_message("随机选歌失败，请稍后再试", channel=channel, area=area)
+            await self.sender.send_message(
+                f"已尝试 {len(selected)} 首歌曲，暂未找到可完整播放的歌曲，请检查网易云账号权限或稍后重试",
+                channel=channel, area=area,
+            )
             return
 
         if first_text is None:
             raise RuntimeError("喜欢列表首首歌曲提交成功但未生成通知文本")
-        if count > 1 and success_count > 1:
-            first_text += f"\n(共 {success_count} 首已加入队列)"
+        if count > 1:
+            first_text += f"\n(已加入 {success_count}/{count} 首，不可播放的歌曲已跳过)"
 
         await self.sender.send_message(text=first_text, attachments=first_attachments, channel=channel, area=area)
 

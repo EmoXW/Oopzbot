@@ -25,6 +25,13 @@ def _load_admin_template() -> string.Template:
 
 
 _ADMIN_PAGES: dict[str, dict[str, Any]] = {
+    "friends": {
+        "page_title": "好友管理", "page_id": "friends", "brand_title": "好友管理",
+        "brand_copy": "管理机器人当前登录账号的好友与好友申请。",
+        "topbar_actions": [{"action": "refresh-friends", "label": "刷新好友与申请"}],
+        "login_title": "登录好友管理", "login_copy": "登录后查看好友、修改备注并处理好友申请。",
+        "login_button": "进入好友管理",
+    },
     "dashboard": {
         "page_title": "后台总览",
         "page_id": "dashboard",

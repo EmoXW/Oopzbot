@@ -130,7 +130,7 @@ class FriendRequestEvent(Event):
         normalized["type"] = str(normalized.get("type") or "")
         normalized["name"] = str(normalized.get("name") or "")
         normalized["avatar"] = str(normalized.get("avatar") or "")
-        normalized["create_time"] = str(normalized.get("create_time") or "")
+        normalized["createTime"] = str(normalized.get("createTime", normalized.get("create_time")) or "")
         try:
             normalized["friend_request_id"] = int(normalized.get("friendRequestId") or 0)
         except (TypeError, ValueError):

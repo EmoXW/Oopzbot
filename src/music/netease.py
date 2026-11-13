@@ -179,7 +179,9 @@ class NeteaseCloud:
             return await self._http.request_json(
                 method.upper(),
                 f"{self.base_url}{path}",
-                params=request_params if method.upper() != "POST" else None,
+                # API 缓存按请求 URL 建键，POST body 的歌曲 ID 和时间戳不会区分缓存。
+                # 独立查询参数避开跨歌曲/账号的旧响应；Cookie 仍只放请求头和 body。
+                params=request_params if method.upper() != "POST" else {"_cache_buster": str(time.time_ns())},
                 data=request_params if method.upper() == "POST" else None,
                 headers=headers,
                 timeout=HTTP_TIMEOUT_DEFAULT,

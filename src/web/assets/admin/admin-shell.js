@@ -8,6 +8,7 @@
     { key: "scheduler", href: "/admin/scheduler", label: "定时" },
     { key: "members", href: "/admin/members", label: "成员" },
     { key: "areas", href: "/admin/areas", label: "域管理" },
+    { key: "friends", href: "/admin/friends", label: "好友" },
     { key: "plugins", href: "/admin/plugins", label: "插件" },
     { key: "setup", href: "/admin/setup", label: "体检" },
     { key: "system", href: "/admin/system", label: "系统" },

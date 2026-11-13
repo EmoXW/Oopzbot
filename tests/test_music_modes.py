@@ -43,6 +43,49 @@ class MusicModeTest(unittest.IsolatedAsyncioTestCase):
         cfg.MUSIC_CONFIG.clear()
         cfg.MUSIC_CONFIG.update(self._music_config)
 
+    def _prepare_random_liked(self, ids):
+        self.handler.sender = AsyncMock()
+        self.handler.names = Mock()
+        self.handler.names.user.return_value = "用户"
+        self.handler._check_and_enter_voice_channel = AsyncMock(return_value=True)
+        self.handler.netease.get_user_id.return_value = "account"
+        self.handler.netease.get_liked_ids.return_value = ids
+        self.fetch_liked = AsyncMock()
+        self.handler._fetch_netease_song_data = self.fetch_liked
+        self.handler._kickoff_cover_prefetch = Mock()
+        self.commit_liked = AsyncMock(return_value={"message": "已点播"})
+        self.handler._commit_song_request = self.commit_liked
+
+    async def test_random_liked_skips_unplayable_song_and_stops_after_success(self):
+        self._prepare_random_liked([1, 2, 3])
+        song = {"name": "可播放歌曲"}
+        self.fetch_liked.side_effect = [None, song]
+        with patch("music.music.random.sample", return_value=[1, 2, 3]):
+            await self.handler.play_liked("channel", "area-1", "user")
+        self.assertEqual(self.fetch_liked.await_count, 2)
+        self.commit_liked.assert_awaited_once_with(song, prefix="用户 随机播放了喜欢的音乐")
+        self.assertEqual(self.handler.sender.send_message.await_args.kwargs["text"], "已点播")
+
+    async def test_random_liked_limits_attempts_and_explains_total_failure(self):
+        self._prepare_random_liked(list(range(100)))
+        self.fetch_liked.return_value = None
+        with patch("music.music.random.sample", return_value=list(range(6))) as sample:
+            await self.handler.play_liked("channel", "area-1", "user")
+        sample.assert_called_once_with(list(range(100)), 6)
+        self.assertEqual(self.fetch_liked.await_count, 6)
+        self.commit_liked.assert_not_awaited()
+        self.assertIn("已尝试 6 首", self.handler.sender.send_message.await_args.args[0])
+
+    async def test_random_liked_fills_requested_count_from_remaining_candidates(self):
+        self._prepare_random_liked([1, 2, 3, 4])
+        first, second = {"name": "第一首"}, {"name": "第二首"}
+        self.fetch_liked.side_effect = [None, first, second]
+        with patch("music.music.random.sample", return_value=[1, 2, 3, 4]):
+            await self.handler.play_liked("channel", "area-1", "user", 2)
+        self.assertEqual(self.fetch_liked.await_count, 3)
+        self.queue.add_to_queue.assert_awaited_once_with(second)
+        self.assertIn("2/2", self.handler.sender.send_message.await_args.kwargs["text"])
+
     async def test_get_play_mode_defaults_to_list(self) -> None:
         self.queue.get_play_mode.return_value = None
 

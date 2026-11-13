@@ -613,17 +613,25 @@ class AsyncOopzGateway:
                     output[uid] = data
         return output
 
-    async def get_friendship(self) -> list[dict[str, Any]]:
+    async def get_friendship(self, *, strict: bool = False) -> list[dict[str, Any]]:
         try:
             return to_legacy(await self.bot.person.get_friendship())
         except Exception:
+            if strict:
+                raise
             return []
 
-    async def get_friendship_requests(self) -> list[dict[str, Any]]:
+    async def get_friendship_requests(self, *, strict: bool = False) -> list[dict[str, Any]]:
         try:
             return to_legacy(await self.bot.person.get_friendship_requests())
         except Exception:
+            if strict:
+                raise
             return []
+
+    async def get_user_remark_name(self, uid: str) -> str:
+        result = await self.bot.person.get_person_remark_name(uid)
+        return next((item.remark_name for item in result.user_remark_names if item.uid == uid), "")
 
     async def post_friendship_response(self, target: str, friend_request_id: int, agree: bool) -> dict[str, Any]:
         try:

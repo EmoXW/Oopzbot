@@ -1,10 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Annotated, Any, Mapping
 
-from pydantic import BaseModel as Bm, ConfigDict
+from pydantic import BaseModel as Bm, BeforeValidator, ConfigDict
 
 from oopz_sdk.utils.payload import coerce_bool
+
+
+def _empty_mute_deadline(value: Any) -> Any:
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
+
+
+# 禁言/禁麦截止时间统一为整数毫秒，兼容接口下发的数字字符串和空值。
+MuteDeadline = Annotated[int | None, BeforeValidator(_empty_mute_deadline)]
 
 
 class BaseModel(Bm):

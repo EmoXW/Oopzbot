@@ -9,6 +9,7 @@ import types
 import unittest
 from pathlib import Path
 from typing import Any, cast
+from unittest.mock import AsyncMock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -100,6 +101,26 @@ class NeteaseCookiePlaybackTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["level"], "exhigh")
         self.assertEqual(data["cookie"], "MUSIC_U=abc")
         self.assertEqual(headers["Cookie"], "MUSIC_U=abc")
+
+    async def test_post_requests_do_not_share_url_only_api_cache(self) -> None:
+        cache = {}
+
+        async def cached_request(method, url, params=None, data=None, **kwargs):
+            assert isinstance(data, dict)
+            key = (url, tuple(sorted((params or {}).items())))
+            if key not in cache:
+                cache[key] = {"code": 200, "data": [{"id": data["id"]}]}
+            self.assertNotIn("cookie", params or {})
+            self.assertEqual(data["cookie"], "MUSIC_U=abc")
+            return cache[key]
+
+        client, _ = self._client(lambda *args: {})
+        client._http = types.SimpleNamespace(request_json=AsyncMock(side_effect=cached_request))
+        first = await client._post_with_cookie("/song/url/v1", {"id": 1})
+        second = await client._post_with_cookie("/song/url/v1", {"id": 2})
+        self.assertEqual(first["data"][0]["id"], 1)
+        self.assertEqual(second["data"][0]["id"], 2)
+        self.assertEqual(len(cache), 2)
 
     async def test_get_user_id_prefers_nested_login_status_profile(self) -> None:
         def responder(method, url, payload):

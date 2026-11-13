@@ -1,0 +1,65 @@
+      <section id="panel" class="hidden table-stack">
+        <article class="surface-card">
+          <div class="action-row" style="flex-wrap:wrap;gap:24px">
+            <div><strong id="friendsTotal" style="font-size:26px">—</strong><div class="friends-copy">好友总数</div></div>
+            <div><strong id="friendsOnline" style="font-size:26px">—</strong><div class="friends-copy">当前在线</div></div>
+            <div><strong id="requestsTotal" style="font-size:26px">—</strong><div class="friends-copy">待处理申请</div></div>
+            <span id="friendsState" class="micro-status is-warning">等待同步</span>
+          </div>
+          <p class="friends-copy">这里显示机器人当前登录 Oopz 账号的好友。申请由管理员手动同意或拒绝。</p>
+          <div id="friendsMsg" class="msg" role="status" aria-live="polite"></div>
+        </article>
+
+        <article class="table-card">
+          <div class="section-head"><h3 class="section-title">好友申请</h3><p class="friends-copy">请确认申请人后再处理。</p></div>
+          <div class="table-shell"><table><thead><tr><th>申请人</th><th>申请时间</th><th>操作</th></tr></thead>
+            <tbody id="requestRows"><tr><td colspan="3" class="empty-state">加载中…</td></tr></tbody>
+          </table></div>
+          <div class="action-row" style="padding:16px;flex-wrap:wrap">
+            <button id="requestPrev" class="btn btn-ghost" data-action="requests-prev" type="button">上一页</button>
+            <span id="requestPage" class="friends-copy">—</span>
+            <button id="requestNext" class="btn btn-ghost" data-action="requests-next" type="button">下一页</button>
+          </div>
+        </article>
+
+        <article class="table-card">
+          <div class="section-head friends-list-head"><h3 class="section-title">我的好友</h3>
+            <div class="friends-search">
+              <input id="friendSearch" aria-label="搜索好友昵称或 UID" placeholder="搜索昵称或 UID" maxlength="80" />
+              <button class="btn btn-primary" data-action="search-friends" type="button">搜索</button>
+              <button class="btn btn-ghost" data-action="clear-friend-search" type="button">清除</button>
+            </div>
+          </div>
+          <div class="table-shell"><table><thead><tr><th>好友</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="friendRows"><tr><td colspan="3" class="empty-state">加载中…</td></tr></tbody>
+          </table></div>
+          <div class="action-row" style="padding:16px;flex-wrap:wrap">
+            <button id="friendPrev" class="btn btn-ghost" data-action="friends-prev" type="button">上一页</button>
+            <span id="friendPage" class="friends-copy">—</span>
+            <button id="friendNext" class="btn btn-ghost" data-action="friends-next" type="button">下一页</button>
+          </div>
+        </article>
+
+        <div id="friendRemarkOverlay" class="m-modal-overlay" data-action="close-friend-remark"></div>
+        <div id="friendRemarkDialog" class="m-modal" role="dialog" aria-modal="true" aria-hidden="true" inert aria-labelledby="friendRemarkTitle">
+          <header class="m-modal__head"><h3 id="friendRemarkTitle" class="m-modal__title">编辑好友备注</h3>
+            <button class="m-modal__close" type="button" data-action="close-friend-remark" aria-label="关闭">&times;</button></header>
+          <div class="m-modal__body">
+            <p id="friendRemarkUser" class="friends-copy"></p>
+            <label for="friendRemarkInput">备注（最多 50 字，留空可清除）</label>
+            <input id="friendRemarkInput" type="text" maxlength="50" autocomplete="off" style="width:100%;margin-top:8px" />
+            <div id="friendRemarkMsg" class="msg" role="status" aria-live="polite"></div>
+          </div>
+          <footer class="m-modal__foot"><button class="btn btn-ghost" type="button" data-action="close-friend-remark">取消</button>
+            <button id="friendRemarkSave" class="btn btn-primary" type="button" data-action="save-friend-remark">保存备注</button></footer>
+        </div>
+      </section>
+
+      <style>
+        .friends-copy { color: var(--ink-faint); font-size: 12px; line-height: 1.6; margin: 4px 0; }
+        .friends-list-head { flex-wrap: wrap; gap: 12px; }
+        .friends-list-head .section-title { flex: 0 0 auto; white-space: nowrap; }
+        .friends-search { display: flex; flex: 1 1 340px; flex-wrap: wrap; gap: 8px; min-width: 0; }
+        .friends-search input { flex: 1 1 200px; min-width: 0; width: 100%; }
+        .friends-search .btn { flex: 0 0 auto; }
+      </style>

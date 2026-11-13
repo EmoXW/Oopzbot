@@ -56,6 +56,11 @@ def admin_plugins_page():
     return _render_admin_page("plugins")
 
 
+@router.get("/admin/friends", response_class=HTMLResponse)
+def admin_friends_page():
+    return _render_admin_page("friends")
+
+
 @router.get("/admin/setup", response_class=HTMLResponse)
 def admin_setup_page():
     return _render_admin_page("setup")

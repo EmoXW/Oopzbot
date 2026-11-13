@@ -1,3 +1,5 @@
+import time
+
 from app.services.runtime import CommandRuntimeView, music_of, sender_of
 from oopz.name_resolver import get_resolver
 
@@ -67,9 +69,10 @@ class CommonCommandService:
 
         text_mute = data.get("disableTextTo", 0)
         voice_mute = data.get("disableVoiceTo", 0)
-        if text_mute and text_mute > 0:
+        now_ms = int(time.time() * 1000)
+        if text_mute and text_mute > now_ms:
             lines.append("  文字禁言: 是")
-        if voice_mute and voice_mute > 0:
+        if voice_mute and voice_mute > now_ms:
             lines.append("  语音禁言: 是")
 
         await self._sender.send_message("\n".join(lines), channel=channel, area=area)

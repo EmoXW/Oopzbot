@@ -6,7 +6,7 @@ from pydantic import AliasChoices, Field, model_validator
 
 from oopz_sdk.exceptions import OopzApiError
 from oopz_sdk.utils.payload import coerce_bool
-from .base import BaseModel
+from .base import BaseModel, MuteDeadline
 
 
 class JoinedAreaInfo(BaseModel):
@@ -88,8 +88,8 @@ class AreaInfo(BaseModel):
     banner: str = ""
     code: str = ""
     desc: str = ""
-    disable_text_to: str | None = Field(default=None, alias="disableTextTo")
-    disable_voice_to: str | None = Field(default=None, alias="disableVoiceTo")
+    disable_text_to: MuteDeadline = Field(default=None, alias="disableTextTo")
+    disable_voice_to: MuteDeadline = Field(default=None, alias="disableVoiceTo")
     edit_count: int = Field(default=0, alias="editCount")
     home_page_channel_id: str = Field(default="", alias="homePageChannelId")
     area_id: str = Field(default="", alias="id")
@@ -270,8 +270,8 @@ class ChannelGroupInfo(BaseModel):
 
 
 class AreaUserDetail(BaseModel):
-    disable_text_to: str | None = Field(default=None, alias="disableTextTo")
-    disable_voice_to: str | None = Field(default=None, alias="disableVoiceTo")
+    disable_text_to: MuteDeadline = Field(default=None, alias="disableTextTo")
+    disable_voice_to: MuteDeadline = Field(default=None, alias="disableVoiceTo")
     higher_uid: str = Field(default="", alias="higherUid")
     roles: list[RoleInfo] = Field(default_factory=list, alias="list")
     now: int = 0
@@ -294,8 +294,8 @@ class AreaUserDetail(BaseModel):
         except (TypeError, ValueError):
             normalized["now"] = 0
 
-        normalized["disableTextTo"] = normalized.get("disableTextTo")
-        normalized["disableVoiceTo"] = normalized.get("disableVoiceTo")
+        normalized["disableTextTo"] = normalized.get("disableTextTo", normalized.get("disable_text_to"))
+        normalized["disableVoiceTo"] = normalized.get("disableVoiceTo", normalized.get("disable_voice_to"))
 
         return normalized
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from pydantic import Field, model_validator
-from .base import BaseModel, OperationResult
+from .base import BaseModel, MuteDeadline, OperationResult
 from oopz_sdk.exceptions import OopzApiError
 from oopz_sdk.utils.payload import coerce_bool
 from enum import Enum
@@ -184,8 +184,8 @@ class ChannelSign(BaseModel):
     agora_sign_pid: str = Field(default="", alias="agoraSignPid")
     app_id: int = Field(default=0, alias="appId")
 
-    disable_text_to: Any = Field(default=None, alias="disableTextTo")
-    disable_voice_to: Any = Field(default=None, alias="disableVoiceTo")
+    disable_text_to: MuteDeadline = Field(default=None, alias="disableTextTo")
+    disable_voice_to: MuteDeadline = Field(default=None, alias="disableVoiceTo")
 
     expire_seconds: int = Field(default=86400, alias="expireSeconds")
     now: int = 0
@@ -236,8 +236,8 @@ class ChannelSign(BaseModel):
         except (TypeError, ValueError):
             normalized["roleSort"] = 0
 
-        normalized["disableTextTo"] = normalized.get("disableTextTo")
-        normalized["disableVoiceTo"] = normalized.get("disableVoiceTo")
+        normalized["disableTextTo"] = normalized.get("disableTextTo", normalized.get("disable_text_to"))
+        normalized["disableVoiceTo"] = normalized.get("disableVoiceTo", normalized.get("disable_voice_to"))
 
         return normalized
 
