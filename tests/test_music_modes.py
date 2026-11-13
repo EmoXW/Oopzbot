@@ -126,6 +126,30 @@ class MusicModeTest(unittest.IsolatedAsyncioTestCase):
         self.queue.pop_random.assert_called_once_with()
         self.queue.play_next.assert_not_called()
 
+    async def test_shuffle_empty_queue_continues_from_likes_when_enabled(self):
+        cfg.MUSIC_CONFIG["auto_play_enabled"] = True
+        self.queue.get_play_mode.return_value = PLAY_MODE_SHUFFLE
+        self.queue.pop_random.return_value = None
+        current = {"channel": "text-1", "area": "area-1"}
+        self.handler._build_autoplay_song = AsyncMock(return_value={"name": "随机续播"})
+        song, source = await self.handler._dequeue_next_song(True, current)
+        self.assertEqual(song, {"name": "随机续播"})
+        self.assertEqual(source, PLAY_MODE_AUTOPLAY)
+        self.handler._build_autoplay_song.assert_awaited_once_with(current)
+        self.queue.play_next.assert_not_awaited()
+
+    async def test_shuffle_empty_queue_respects_disabled_setting_and_manual_next(self):
+        self.queue.get_play_mode.return_value = PLAY_MODE_SHUFFLE
+        self.queue.pop_random.return_value = None
+        self.handler._build_autoplay_song = AsyncMock()
+        for enabled, natural_end in ((False, True), (True, False)):
+            with self.subTest(enabled=enabled, natural_end=natural_end):
+                cfg.MUSIC_CONFIG["auto_play_enabled"] = enabled
+                song, source = await self.handler._dequeue_next_song(natural_end, {"name": "current"})
+                self.assertIsNone(song)
+                self.assertEqual(source, PLAY_MODE_SHUFFLE)
+        self.handler._build_autoplay_song.assert_not_awaited()
+
     async def test_stop_mode_stops_after_current_song_finishes(self) -> None:
         self.queue.get_play_mode.return_value = PLAY_MODE_STOP
 

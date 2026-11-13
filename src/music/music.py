@@ -1097,11 +1097,12 @@ class MusicHandler(PlaybackMixin):
         if natural_end and mode == PLAY_MODE_SINGLE and current_song:
             return copy.deepcopy(current_song), PLAY_MODE_SINGLE
         if mode == PLAY_MODE_SHUFFLE and hasattr(q, "pop_random"):
-            return await q.pop_random(), "queue"
-        next_song = await q.play_next()
+            next_song = await q.pop_random()
+        else:
+            next_song = await q.play_next()
         if next_song:
             return next_song, "queue"
-        if natural_end and mode == PLAY_MODE_LIST and _music_auto_play_enabled():
+        if natural_end and mode in (PLAY_MODE_LIST, PLAY_MODE_SHUFFLE) and _music_auto_play_enabled():
             return await self._build_autoplay_song(current_song), PLAY_MODE_AUTOPLAY
         return None, mode
 
