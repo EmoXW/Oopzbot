@@ -135,7 +135,7 @@ class ActionsTests(unittest.IsolatedAsyncioTestCase):
         self.sender = SimpleNamespace(send_message=AsyncMock())
         self.actions = MusicActions(self.music, self.sender, 'a', 'v', 'text')
 
-    async def test_exact_play_and_same_user_confirmation(self):
+    async def test_exact_play_and_shared_confirmation(self):
         song = {'id': 1, 'name': '晴天', 'artists': '周杰伦'}
         self.music.search_candidates.return_value = [song]
         await self.actions.run('播放周杰伦的晴天', 'u')
@@ -145,9 +145,26 @@ class ActionsTests(unittest.IsolatedAsyncioTestCase):
         await self.actions.run('播放晴天', 'u')
         self.music.play_song_choice.assert_not_awaited()
         await self.actions.run('第二首', 'other')
-        self.music.play_song_choice.assert_not_awaited()
-        await self.actions.run('第二首', 'u')
         self.assertEqual(self.music.play_song_choice.await_args.args[0]['id'], 2)
+        await self.actions.run('第二首', 'u')
+        self.music.play_song_choice.assert_awaited_once()
+
+    async def test_first_valid_reply_claims_candidates_before_slow_playback(self):
+        song = {'id': 5, 'name': 'song', 'artists': 'artist'}
+        self.actions.pending['original-speaker'] = (1e20, 1, [song])
+        started, release = asyncio.Event(), asyncio.Event()
+        async def slow_play(*args, **kwargs):
+            started.set()
+            await release.wait()
+        self.music.play_song_choice.side_effect = slow_play
+        first = asyncio.create_task(self.actions.run('1', 'first-person'))
+        await started.wait()
+        self.assertEqual(self.actions.pending, {})
+        await self.actions.run('第一首', 'second-person')
+        self.music.play_song_choice.assert_awaited_once()
+        self.assertEqual(self.music.play_song_choice.call_args.args[3], 'first-person')
+        release.set()
+        await first
 
     async def test_five_candidates_support_spoken_fifth_choice(self):
         songs = [{'id': i, 'name': 'song' + str(i), 'artists': 'artist'} for i in range(1, 7)]
@@ -298,19 +315,17 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         await service.close()
         self.assertIsNone(self.music._voice_wake_channel)
 
-    async def test_text_number_selects_only_own_voice_candidates_in_same_channel(self):
+    async def test_text_number_allows_any_person_without_identity_lookup(self):
         from domain.playback.voice_participant import VoiceParticipant
         key = VoiceParticipant('123', 'a', 'v')
         self.service.actions.pending[key] = (1e20, 1, [{'id': 5}])
         self.raw.get_person_detail_full = AsyncMock(return_value={'pid': '123'})
         self.assertFalse(await self.service.select_text('5', 'wrong', 'a', 'u'))
         self.raw.get_person_detail_full.assert_not_awaited()
-        self.raw.get_person_detail_full.return_value = {'pid': 'other'}
-        self.assertFalse(await self.service.select_text('5', 'text', 'a', 'other'))
-        self.action_run.assert_not_awaited()
-        self.raw.get_person_detail_full.return_value = {'pid': '123'}
-        self.assertTrue(await self.service.select_text('5', 'text', 'a', 'u'))
-        self.action_run.assert_awaited_once_with('5', key)
+        self.assertFalse(await self.service.select_text('5', 'text', 'other-area', 'other'))
+        self.assertTrue(await self.service.select_text('5', 'text', 'a', 'other'))
+        self.action_run.assert_awaited_once_with('5', VoiceParticipant('text:other', 'a', 'v'))
+        self.raw.get_person_detail_full.assert_not_awaited()
 
     async def test_follow_channel_clears_previous_capture_and_candidates(self):
         self.service.capture = True

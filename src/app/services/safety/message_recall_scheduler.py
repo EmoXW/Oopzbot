@@ -149,12 +149,14 @@ class MessageRecallScheduler:
                 continue
             job = heapq.heappop(self._pending)
             try:
-                await self._sender.recall_message(
+                result = await self._sender.recall_message(
                     message_id=job.message_id,
                     area=job.area,
                     channel=job.channel,
                     timestamp=job.timestamp,
                 )
+                if isinstance(result, dict) and (result.get('error') or result.get('status') is False):
+                    logger.warning('自动撤回被接口拒绝: %s', result.get('error') or result.get('message') or 'unknown')
             except asyncio.CancelledError:
                 raise
             except Exception:

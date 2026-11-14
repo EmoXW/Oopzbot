@@ -1,4 +1,4 @@
-"""Voice commands reuse the existing music operations, with per-user confirmations."""
+"""Voice commands with a shared, single-use candidate list per active channel."""
 from __future__ import annotations
 
 import re
@@ -36,7 +36,7 @@ class MusicActions:
             return
         command = parse_command(text)
         LOG.info('语音指令处理：类型 %s', command.get('action') or 'unrecognized')
-        pending = self.pending.get(user)
+        pending = next(iter(self.pending.values()), None)
         clean = normalize(text).replace(' ', '')
         choice = re.fullmatch(r'(?:选择|播放)?第?([一二三四五12345])首?', clean)
         if not pending and (choice or clean in ('确认', '就这首')):
@@ -45,7 +45,7 @@ class MusicActions:
         if pending and (choice or clean in ('确认', '就这首')):
             expires, generation, songs = pending
             if expires < time.monotonic() or generation != self.music._playback_generation:
-                self.pending.pop(user, None)
+                self.pending.clear()
                 await self.say('选歌确认已过期，请重新说出歌名。')
                 return
             index = {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4,
@@ -53,7 +53,8 @@ class MusicActions:
             if index >= len(songs):
                 await self.say('没有这个选项，请重新点歌。')
                 return
-            self.pending.pop(user, None)
+            # Claim synchronously before the first await: another reply cannot win too.
+            self.pending.clear()
             await self.music.play_song_choice(songs[index], self.text_channel, self.area, user, expected_voice_channel=self.voice_channel)
             return
         if not command['recognized']:
@@ -61,13 +62,14 @@ class MusicActions:
             return
         action, params = command['action'], command['parameters']
         if action == 'cancel':
-            self.pending.pop(user, None)
+            self.pending.clear()
             await self.say('已取消本次语音输入。')
             return
         if action == 'help':
             await self.say('语音命令：\n' + '\n'.join(' / '.join(row['examples'][:2]) for row in CATALOG))
             return
         if action == 'play':
+            self.pending.clear()
             generation = self.music._playback_generation
             songs = (await self.music.search_candidates(params['query'], params['platform'], limit=5))[:5]
             LOG.info('语音点歌搜索完成：候选数 %s', len(songs))
@@ -86,13 +88,11 @@ class MusicActions:
                 return
             self.pending[user] = (time.monotonic() + 45, generation, songs)
             LOG.info('语音点歌等待选歌确认')
-            if len(self.pending) > 64:
-                self.pending.pop(next(iter(self.pending)))
-            await self.say('请再次喊 GG Bot 后说“第一首”至“第五首”，或本人在此频道直接发送数字 1-5 选择，45 秒内有效：\n' +
+            await self.say('任何人都可再次喊 GG Bot 后说“第一首”至“第五首”，或在此频道直接发送数字 1-5。45 秒内有效，仅采纳最先收到的有效选择：\n' +
                            '\n'.join(f'{index}. {song.get("name")} · {song.get("artists")}'
                                      for index, song in enumerate(songs, 1)))
             return
-        self.pending.pop(user, None)
+        self.pending.clear()
         if action == 'random_liked':
             await self.music.play_liked(self.text_channel, self.area, user, expected_voice_channel=self.voice_channel)
         elif action == 'next':

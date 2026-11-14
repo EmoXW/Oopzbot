@@ -2,9 +2,12 @@ from collections.abc import Awaitable, Callable
 from typing import cast
 
 from app.services.runtime import CommandRuntimeView
+from core.logger_config import get_logger
 from domain.routing.plain_music_commands import plain_music_command
 
 from .command_message_service import MessageContext
+
+LOG = get_logger('CommandRouter')
 
 
 class CommandRouter:
@@ -26,9 +29,10 @@ class CommandRouter:
             choose = getattr(self._services.interaction.music, 'handle_voice_pick', None)
             callback = cast(Callable[[str, str, str, str], Awaitable[bool]], choose)
             if callable(choose) and await callback(ctx.content, ctx.channel, ctx.area, ctx.user) is True:
-                await self._services.safety.recall_scheduler.schedule_user_message_recall(
+                scheduled = await self._services.safety.recall_scheduler.schedule_user_message_recall(
                     ctx.message_id, ctx.channel, ctx.area, ctx.timestamp,
                 )
+                LOG.info('编号选歌完成：已安排撤回 %s，消息编号存在 %s', scheduled, bool(ctx.message_id))
                 return
 
         if getattr(self._runtime.plugins, "matches_plain_command", lambda _: False)(ctx.content) is True:

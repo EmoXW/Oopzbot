@@ -159,7 +159,7 @@ class PlainMusicCommandTest(unittest.TestCase):
 
 
 class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
-    async def test_plain_voice_choice_only_consumes_owned_pending_selection(self):
+    async def test_plain_voice_choice_only_consumes_active_pending_selection(self):
         from app.services.routing.command_message_service import MessageContext
         self.music.handle_voice_pick = AsyncMock(return_value=True)
         ctx = MessageContext(raw={}, content='5', channel='channel', area='area',

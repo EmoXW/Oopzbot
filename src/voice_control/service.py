@@ -89,22 +89,14 @@ class VoiceControlService:
 
     async def select_text(self, text, channel, area, user):
         actions = self.actions
+        LOG.info('收到文字选歌编号：当前频道匹配 %s，存在候选 %s',
+                 (area, channel) == (actions.area, actions.text_channel), bool(actions.pending))
         if (text.strip() not in ('1', '2', '3', '4', '5') or not actions.current()
                 or (area, channel) != (actions.area, actions.text_channel) or not actions.pending):
             return False
-        key = user
-        if key not in actions.pending:
-            raw = getattr(self.sender, 'raw', self.sender)
-            try:
-                profile = await raw.get_person_detail_full(user)
-            except Exception:
-                return False
-            pid = str(profile.get('pid') or '')
-            if not pid:
-                return False
-            key = VoiceParticipant(pid, actions.area, actions.voice_channel)
-        if self.actions is not actions or not actions.current() or key not in actions.pending:
-            return False
+        # Selection belongs to the channel, not the speaker who requested it.
+        # Preserve channel binding without requiring an Oopz/Agora identity lookup.
+        key = VoiceParticipant('text:' + str(user), actions.area, actions.voice_channel)
         await actions.run(text.strip(), key)
         return True
 
