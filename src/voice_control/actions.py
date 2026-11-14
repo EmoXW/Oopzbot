@@ -5,10 +5,13 @@ import re
 import time
 from typing import Any
 
+from core.logger_config import get_logger
 from core.redis_keys import VOLUME
 from domain.playback import AreaId, AreaWebCommand, GlobalWebCommand
 
 from .intent import CATALOG, normalize, parse_command
+
+LOG = get_logger('VoiceActions')
 
 
 def comparable(value):
@@ -32,6 +35,7 @@ class MusicActions:
         if not self.current():
             return
         command = parse_command(text)
+        LOG.info('语音指令处理：类型 %s', command.get('action') or 'unrecognized')
         pending = self.pending.get(user)
         clean = normalize(text).replace(' ', '')
         choice = re.fullmatch(r'(?:选择|播放)?第?([一二三123])首?', clean)
@@ -63,6 +67,7 @@ class MusicActions:
         if action == 'play':
             generation = self.music._playback_generation
             songs = await self.music.search_candidates(params['query'], params['platform'], limit=3)
+            LOG.info('语音点歌搜索完成：候选数 %s', len(songs))
             if not self.current() or generation != self.music._playback_generation:
                 return
             for song in songs:
@@ -77,6 +82,7 @@ class MusicActions:
                 await self.say('没有找到匹配歌曲，请重说歌名和歌手。')
                 return
             self.pending[user] = (time.monotonic() + 45, generation, songs)
+            LOG.info('语音点歌等待选歌确认')
             if len(self.pending) > 64:
                 self.pending.pop(next(iter(self.pending)))
             await self.say('请再次喊 GG Bot 后说“第一首 / 第二首 / 第三首”确认，45 秒内有效：\n' +

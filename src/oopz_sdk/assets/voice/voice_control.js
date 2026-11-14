@@ -67,27 +67,28 @@ window.agoraEnableVoiceCapture=async(enabled)=>{
   return {ok:true,generation:voiceCapture.generation};
 };
 window.agoraDrainVoiceAudio=()=>({ok:true,generation:voiceCapture.generation,frames:voiceCapture.frames.splice(0),users:Array.from(voiceCapture.tracks.keys())});
-window.agoraWakeTone=async()=>{
+window.agoraWakeTone=async(volume=150,audioBase64='')=>{
   if(!client||client.connectionState!=='CONNECTED')return {ok:false};
   const joinedClient=client;
   const context=new AudioContext();
   const destination=context.createMediaStreamDestination();
-  const oscillator=context.createOscillator(),gain=context.createGain();
-  oscillator.frequency.value=880;oscillator.connect(gain);gain.connect(destination);
+  const source=context.createBufferSource();
+  source.connect(destination);
   let tone;
   try{
-    tone=AgoraRTC.createCustomAudioTrack({mediaStreamTrack:destination.stream.getAudioTracks()[0]});
-    tone.setVolume(50);await context.resume();await joinedClient.publish([tone]);
+    const bytes=Uint8Array.from(atob(audioBase64),character=>character.charCodeAt(0));
+    source.buffer=await context.decodeAudioData(bytes.buffer);
+    tone=AgoraRTC.createCustomAudioTrack({mediaStreamTrack:destination.stream.getAudioTracks()[0],encoderConfig:'high_quality_stereo'});
+    tone.setVolume(Math.max(0,Math.min(200,Number.isFinite(Number(volume))?Number(volume):150)));await context.resume();await joinedClient.publish([tone]);
     await sendCurrentVoiceState(2);
-    const now=context.currentTime;
-    gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.2,now+.015);
-    gain.gain.exponentialRampToValueAtTime(.001,now+.22);
-    oscillator.start(now);oscillator.stop(now+.23);
-    await new Promise(resolve=>setTimeout(resolve,260));
+    // Allow the receiver to subscribe before the short cue, then flush its tail.
+    await new Promise(resolve=>setTimeout(resolve,450));
+    source.start();
+    await new Promise(resolve=>setTimeout(resolve,Math.ceil(source.buffer.duration*1000)+350));
     for(const entry of voiceCapture.tracks.values()){entry.buffer=new Uint8Array(3200);entry.offset=0;entry.phase=0;entry.sum=0;entry.count=0;}
     return {ok:true,after:Date.now(),generation:voiceCapture.generation};
   }finally{
     if(tone){try{await joinedClient.unpublish([tone]);}catch(_){}tone.close();}
-    oscillator.disconnect();gain.disconnect();await context.close();
+    try{source.stop();}catch(_){}source.disconnect();await context.close();
   }
 };

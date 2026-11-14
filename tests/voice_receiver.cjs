@@ -5,9 +5,13 @@ const handlers={};const client={connectionState:'CONNECTED',remoteUsers:[remote]
 let published=false,closed=false;const musicTrack={music:true};client.localTracks=[musicTrack];
 client.publish=async tracks=>{published=true;client.localTracks.push(...tracks);};
 client.unpublish=async tracks=>{client.localTracks=client.localTracks.filter(track=>!tracks.includes(track));};
-class AudioContext {constructor(){this.currentTime=0;}createMediaStreamDestination(){return{stream:{getAudioTracks:()=>[{}]}};}createOscillator(){return{frequency:{},connect(){},disconnect(){},start(){assert(published);},stop(){}};}createGain(){return{gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}async resume(){}async close(){}}
-const tone={setVolume(value){assert.equal(value,50);},close(){closed=true;}};
-const scope={window,client,console,Date,Map,Set,Uint8Array,Array,Promise,Math,String,AudioContext,setTimeout:fn=>fn(),AgoraRTC:{createCustomAudioTrack:()=>tone},sendCurrentVoiceState:async()=>{},btoa:s=>Buffer.from(s,'binary').toString('base64')};
+const sound=fs.readFileSync(path.join(__dirname,'../src/oopz_sdk/assets/voice/wake_sound.mp3'));
+const soundBase64=sound.toString('base64');
+class AudioContext {constructor(){this.currentTime=0;}createMediaStreamDestination(){return{stream:{getAudioTracks:()=>[{}]}};}createBufferSource(){return{buffer:null,connect(){},disconnect(){},start(){assert(published);},stop(){}};}async decodeAudioData(bytes){assert(Buffer.from(bytes).equals(sound));return{duration:.679184};}async resume(){}async close(){}}
+
+let expectedVolume=150;
+const tone={setVolume(value){assert.equal(value,expectedVolume);},close(){closed=true;}};
+const scope={window,client,console,Date,Map,Set,Uint8Array,Array,Promise,Math,String,AudioContext,setTimeout:fn=>fn(),AgoraRTC:{createCustomAudioTrack:()=>tone},sendCurrentVoiceState:async()=>{},atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64')};
 vm.createContext(scope);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/oopz_sdk/assets/voice/voice_control.js'),'utf8'),scope);
 (async()=>{
  window.agoraAttachVoiceCapture(client);
@@ -20,6 +24,8 @@ vm.createContext(scope);vm.runInContext(fs.readFileSync(path.join(__dirname,'../
  assert.equal(window.agoraDrainVoiceAudio().frames.length,120);
  handlers['user-left'](remote);assert.equal(callback,null);
  await window.agoraEnableVoiceCapture(false);assert.equal(unsubscribed,1);assert.equal(window.agoraDrainVoiceAudio().frames.length,0);
- const beep=await window.agoraWakeTone();assert(beep.ok);assert(closed);assert.deepEqual(client.localTracks,[musicTrack]);
+ const beep=await window.agoraWakeTone(150,soundBase64);assert(beep.ok);assert(closed);assert.deepEqual(client.localTracks,[musicTrack]);
+ expectedVolume=75;await window.agoraWakeTone(75,soundBase64);assert.deepEqual(client.localTracks,[musicTrack]);
+ expectedVolume=0;await window.agoraWakeTone(0,soundBase64);assert.deepEqual(client.localTracks,[musicTrack]);
  console.log('Receiver JS: opt-in subscription, 48k to 16k PCM, user isolation, bounded queue, detach and disable passed.');
 })().catch(error=>{console.error(error);process.exit(1);});

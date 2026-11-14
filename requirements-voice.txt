@@ -1,2 +1,2 @@
-# Optional bot-side wake detection; not installed in the default image.
-vosk>=0.3.44,<0.4
+# Compatibility install list; Vosk is also included in requirements.txt.
+vosk==0.3.45

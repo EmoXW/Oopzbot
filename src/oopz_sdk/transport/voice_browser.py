@@ -473,8 +473,10 @@ class BrowserVoiceTransport:
     async def drain_voice_audio(self):
         return await self._run_on_browser("agoraDrainVoiceAudio")
 
-    async def play_wake_tone(self):
-        return await self._run_on_browser("agoraWakeTone")
+    async def play_wake_tone(self, volume: int = 150):
+        sound_path = Path(__file__).resolve().parent.parent / 'assets' / 'voice' / 'wake_sound.mp3'
+        sound = base64.b64encode(sound_path.read_bytes()).decode('ascii')
+        return await self._run_on_browser("agoraWakeTone", max(0, min(200, int(volume))), sound)
 
     async def set_volume(self, volume: int) -> bool:
         result = await self._run_on_browser("agoraSetVolume", int(volume))

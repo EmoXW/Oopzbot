@@ -73,6 +73,9 @@ jobs:
       - name: Syntax check
         run: python -m compileall -q main.py src plugins tools
 
+      - name: Verify voice receiver and independent wake cue
+        run: node tests/voice_receiver.cjs
+
       - name: Incremental Ruff and Pyright
         if: matrix.python-version == '3.10'
         env:

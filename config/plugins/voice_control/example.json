@@ -3,9 +3,10 @@
   "area": "",
   "voice_channel": "",
   "text_channel": "",
-  "wake_model_path": "data/models/vosk-model-small-en-us-0.15",
+  "wake_model_path": "",
   "asr_url": "http://host.docker.internal:18767",
   "asr_token": "",
   "allowed_uids": [],
-  "hotwords": []
+  "hotwords": [],
+  "wake_volume": 150
 }

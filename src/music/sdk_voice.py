@@ -297,8 +297,8 @@ class SdkVoiceController:
     async def drain_voice_audio(self):
         return await self._voice.backend.drain_voice_audio()
 
-    async def play_wake_tone(self):
-        return await self._voice.backend.play_wake_tone()
+    async def play_wake_tone(self, volume: int = 150):
+        return await self._voice.backend.play_wake_tone(volume)
 
     async def set_volume(self, volume: int) -> bool:
         return await self._voice.set_volume(volume)

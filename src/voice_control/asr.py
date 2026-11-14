@@ -4,6 +4,8 @@ from urllib.parse import urlsplit
 
 import aiohttp
 
+from domain.plugins.base import parse_string_list
+
 
 class LocalASR:
     def __init__(self, url, token, hotwords):
@@ -14,7 +16,8 @@ class LocalASR:
             raise ValueError('识别服务地址应为 http(s)://主机:端口。')
         if not token:
             raise ValueError('请配置本地识别服务的访问密钥。')
-        self.url, self.token, self.hotwords = url.rstrip('/'), token, hotwords
+        self.url, self.token = url.rstrip('/'), token
+        self.hotwords = parse_string_list(hotwords or [])
         self.http = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=45), trust_env=False)
 
     async def transcribe(self, pcm):

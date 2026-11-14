@@ -156,7 +156,10 @@ class WebControlExecutor:
         except Exception as e:
             logger.debug(f"执行 stop 时清理 play_state 失败: {e}")
         await self._stop_voice_audio("执行 stop 时")
-        await self.h._leave_current_voice_channel()
+        standby = getattr(self.h, '_voice_wake_standby', None)
+        current = (getattr(self.h, '_voice_channel_area', None), getattr(self.h, '_voice_channel_id', None))
+        if standby is None or standby != current:
+            await self.h._leave_current_voice_channel()
 
     async def _handle_pause(self, queue):
         if self.h.voice and self.h.voice.available and await self.h.voice.pause_audio():

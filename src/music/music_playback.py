@@ -300,6 +300,8 @@ class PlaybackMixin:
                             grace = time.time() - self._voice_enter_time < 30
                             keep_awake = getattr(self, "_voice_wake_channel", None) == (area, session.channel)
                             stop_after_song = keep_awake and await queue.get_play_mode() == "stop"
+                            if getattr(self, '_voice_wake_standby', None) == (area, session.channel):
+                                stop_after_song = False
                             if not grace and (not keep_awake or stop_after_song):
                                 logger.info("队列已空，Bot 自动退出语音频道")
                                 await self._leave_current_voice_channel()

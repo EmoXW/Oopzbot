@@ -84,6 +84,11 @@ class CommandTest(unittest.TestCase):
         self.assertEqual(parse_command('取消')['action'], 'cancel')
         self.assertNotEqual(parse_command('取消')['action'], parse_command('停止播放')['action'])
 
+    def test_nevermind_cancels_only_the_voice_request(self):
+        for phrase in ('没事', '没事了', '没事。', '算了', '不用了'):
+            self.assertEqual(parse_command(phrase)['action'], 'cancel')
+        self.assertEqual(parse_command('播放没事')['action'], 'play')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-"""Single-channel optional wake service. Audio never crosses user streams."""
+"""Follow the bot within its configured area, returning to its standby channel."""
 from __future__ import annotations
 
 import asyncio
@@ -6,6 +6,7 @@ import base64
 import time
 
 from core.logger_config import get_logger
+from domain.playback.voice_participant import VoiceParticipant
 
 from .actions import MusicActions
 from .asr import LocalASR
@@ -31,6 +32,8 @@ class VoiceControlService:
         self.joined_once = False
         self.next_join = 0.0
         self.muted_volume = None
+        self._diagnostic_at = 0.0
+        self._received_frames = 0
 
     def in_channel(self):
         return self.actions.current()
@@ -41,13 +44,16 @@ class VoiceControlService:
         self.model = await asyncio.to_thread(WakeModel, self.settings['wake_model_path'])
         self.asr = LocalASR(self.settings['asr_url'], self.settings['asr_token'], self.settings['hotwords'])
         self.music._voice_wake_channel = (self.settings['area'], self.settings['voice_channel'])
+        self.music._voice_wake_standby = (self.settings['area'], self.settings['voice_channel'])
 
     async def resolve_user(self, rtc_uid):
         if not self.in_channel():
             return None
+        if not self.settings['allowed_uids']:
+            return VoiceParticipant(str(rtc_uid), self.actions.area, self.actions.voice_channel)
         raw = getattr(self.sender, 'raw', self.sender)
         members = await raw.get_voice_channel_members(area=self.settings['area'])
-        users = [str(item.get('uid') or '') for item in members.get(self.settings['voice_channel'], [])
+        users = [str(item.get('uid') or '') for item in members.get(self.actions.voice_channel, [])
                  if not item.get('isBot')]
         users = [user for user in users if user]
         if not users:
@@ -61,10 +67,11 @@ class VoiceControlService:
             return None
         # Recheck real channel membership after profile lookup / slow inference.
         channel = await raw.get_voice_channel_for_user_strict(user, area=self.settings['area'])
-        return user if channel == self.settings['voice_channel'] and self.in_channel() else None
+        return user if channel == self.actions.voice_channel and self.in_channel() else None
 
     async def close(self):
         self.music._voice_wake_channel = None
+        self.music._voice_wake_standby = None
         self.listeners.clear()
         self.actions.pending.clear()
         self.owner = None
@@ -96,6 +103,22 @@ class VoiceControlService:
             await self.close()
 
     async def poll(self):
+        current_channel = self.music._voice_channel_id
+        if (current_channel and self.music._voice_channel_area == self.settings['area']
+                and current_channel != self.actions.voice_channel):
+            if self.capture:
+                await self.voice.configure_voice_capture(False)
+            self.capture = False
+            self.listeners.clear()
+            self.owner = None
+            self.actions.pending.clear()
+            self.actions = MusicActions(self.music, self.sender, self.settings['area'],
+                                        current_channel, self.settings['text_channel'])
+            self.generation = None
+            self.after = time.time() * 1000
+            LOG.info('语音唤醒已跟随机器人当前频道')
+        if current_channel and self.music._voice_channel_area == self.settings['area']:
+            self.music._voice_wake_channel = (self.settings['area'], current_channel)
         if not self.in_channel():
             if self.capture:
                 await self.voice.configure_voice_capture(False)
@@ -103,10 +126,12 @@ class VoiceControlService:
                 self.listeners.clear()
                 self.owner = None
                 self.actions.pending.clear()
-            if not self.joined_once and not self.music._voice_channel_id and time.monotonic() >= self.next_join:
+            if not self.music._voice_channel_id and time.monotonic() >= self.next_join:
                 self.next_join = time.monotonic() + 30
                 result = await self.music.enter_voice_channel(self.settings['voice_channel'], self.settings['area'])
                 self.joined_once = bool(result.get('status'))
+                if self.joined_once:
+                    self.next_join = 0.0
             return
         self.joined_once = True
         if not self.capture:
@@ -115,6 +140,11 @@ class VoiceControlService:
                 raise ValueError('Voice receive setup failed')
             self.capture = True
         data = await self.voice.drain_voice_audio()
+        self._received_frames += len(data.get('frames', []))
+        if time.monotonic() >= self._diagnostic_at:
+            LOG.info('语音唤醒接收状态：音轨数 %s，接收帧数 %s', len(data.get('users', [])), self._received_frames)
+            self._received_frames = 0
+            self._diagnostic_at = time.monotonic() + 30
         if self.generation != data.get('generation'):
             self.listeners.clear()
             self.actions.pending.clear()
@@ -149,13 +179,16 @@ class VoiceControlService:
     async def handle(self, uid, event):
         kind, pcm = event
         if kind == 'wake':
+            LOG.info('检测到唤醒词')
             user = await self.resolve_user(uid)
             if not user:
+                LOG.warning('唤醒未通过频道成员身份校验')
                 self.listeners[uid].reset()
                 return
             self.owner = uid
-            tone = await self.voice.play_wake_tone()
+            tone = await self.voice.play_wake_tone(self.settings.get('wake_volume', 150))
             if not tone.get('ok'):
+                LOG.warning('唤醒提示音发布失败')
                 self.listeners[uid].reset()
                 self.owner = None
                 return
@@ -168,6 +201,7 @@ class VoiceControlService:
             user = await self.resolve_user(uid)
             if user and self.asr:
                 text = await self.asr.transcribe(pcm)
+                LOG.info('语音指令识别完成：结果非空 %s', bool(text))
                 now = (self.music._voice_channel_area, self.music._voice_channel_id, self.music._playback_generation)
                 if before == now and await self.resolve_user(uid) == user and self.in_channel():
                     await self.actions.run(text, user)

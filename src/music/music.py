@@ -140,6 +140,7 @@ class MusicHandler(PlaybackMixin):
         self._voice_channel_id: str | None = None
         self._voice_channel_area: str | None = None
         self._voice_wake_channel: tuple[str, str] | None = None
+        self._voice_wake_standby: tuple[str, str] | None = None
         self._voice_enter_time: float = 0
         self._playlist_idle_since: float = 0
         self._web_link_released_due_to_idle: bool = False
@@ -376,6 +377,12 @@ class MusicHandler(PlaybackMixin):
             )
             return False
 
+        from domain.playback.voice_participant import VoiceParticipant
+        if isinstance(user, VoiceParticipant):
+            # Remote audio already belongs to this configured channel. No account lookup.
+            return (expected_voice_channel is not None
+                    and user.area == area and user.channel == expected_voice_channel
+                    and self._voice_channel_id == expected_voice_channel and self._voice_channel_area == area)
         voice_ch_id = await self.sender.get_voice_channel_for_user(user, area=area)
         if expected_voice_channel is not None and (voice_ch_id != expected_voice_channel
                 or self._voice_channel_id != expected_voice_channel or self._voice_channel_area != area):
@@ -867,7 +874,7 @@ class MusicHandler(PlaybackMixin):
         await self.sender.send_message(text=first_text, attachments=first_attachments, channel=channel, area=area)
 
     async def stop_play(self, channel: str, area: str) -> None:
-        """停止播放并退出语音频道"""
+        """停止音乐；启用语音待命时保留待命频道连接。"""
         async with self._playback_lock:
             session = self._playback_snapshot_locked()
             if session.area is None or session.area.value != str(area or "").strip():
@@ -882,14 +889,18 @@ class MusicHandler(PlaybackMixin):
             self._play_duration = 0
             q = self._get_queue(area)
             await q.clear_current()
+            await q.clear_queue()
             try:
                 await q.clear_play_state()
             except Exception as e:
                 logger.debug(f"停止播放时清理 play_state 失败: {e}")
             if self.voice and self.voice.available:
                 await self.voice.stop_audio()
-            await self._leave_current_voice_channel()
-        await self.sender.send_message("已停止播放，Bot 已退出语音频道", channel=channel, area=area)
+            stay = getattr(self, '_voice_wake_standby', None) == (str(area), session.channel)
+            if not stay:
+                await self._leave_current_voice_channel()
+        message = "已停止播放，Bot 保持语音待命" if stay else "已停止播放，Bot 已退出语音频道"
+        await self.sender.send_message(message, channel=channel, area=area)
 
     async def get_play_mode(self, queue=None) -> str:
         """读取当前播放模式；未配置时默认列表循环。"""

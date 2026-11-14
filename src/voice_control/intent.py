@@ -27,7 +27,7 @@ CATALOG = [
     {'action': 'queue', 'label': '查看队列', 'examples': ['查看队列', '后面还有什么歌'], 'effect': '查询待播放歌曲列表。'},
     {'action': 'clear_queue', 'label': '清空队列', 'examples': ['清空队列', '删掉后面的歌'], 'effect': '清空待播放队列，保留当前歌曲。'},
     {'action': 'help', 'label': '命令帮助', 'examples': ['帮助', '你支持什么命令'], 'effect': '显示支持的语音说法和动作。'},
-    {'action': 'cancel', 'label': '取消本次输入', 'examples': ['取消', '算了', '没事了'], 'effect': '结束本次语音输入，不改变音乐状态。'},
+    {'action': 'cancel', 'label': '取消本次输入', 'examples': ['没事', '没事了', '取消', '算了'], 'effect': '结束本次语音输入，不改变音乐状态。'},
 ]
 ALIASES = {
     'random_liked': ['随便来一首', '随机放一首', '随便播放一首', '随机一首'],

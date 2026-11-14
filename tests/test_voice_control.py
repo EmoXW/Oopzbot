@@ -6,6 +6,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
@@ -73,6 +74,10 @@ class ASRTests(unittest.IsolatedAsyncioTestCase):
         self.addAsyncCleanup(client.close)
         self.assertEqual(await client.transcribe(b'\x00\x10' * 1600), '播放晴天')
         recognize.assert_called_once_with(b'\x00\x10' * 1600, ['晴天'])
+        empty = LocalASR(str(server.make_url('/')).rstrip('/'), 'test-secret', '')
+        self.addAsyncCleanup(empty.close)
+        self.assertEqual(await empty.transcribe(b'\x00\x10' * 1600), '播放晴天')
+        self.assertEqual(recognize.call_args.args[1], [])
         async with aiohttp.ClientSession() as http:
             async with http.post(server.make_url('/transcribe'), json={}) as response:
                 self.assertEqual(response.status, 401)
@@ -90,6 +95,29 @@ class ASRTests(unittest.IsolatedAsyncioTestCase):
         await plugin.on_unload()
         with self.assertRaises(ValueError):
             await plugin.on_load(host, PluginConfig('voice_control', {'enabled': True}, '', False))
+
+    async def test_independent_wake_volume_defaults_and_bounds(self):
+        spec = VoiceControl().config_spec
+        self.assertEqual(spec.to_example()['wake_volume'], 150)
+        for value in (0, 75, 150, 200):
+            self.assertEqual(spec.apply(PluginConfig('voice_control', {'wake_volume': str(value)}, '', True))['wake_volume'], value)
+        for value in (-1, 201):
+            with self.assertRaises(ValueError):
+                spec.apply(PluginConfig('voice_control', {'wake_volume': value}, '', True))
+
+    async def test_plugin_automatically_resolves_its_bundled_wake_model(self):
+        service = SimpleNamespace(start=AsyncMock(), run=AsyncMock(), close=AsyncMock())
+        plugin = VoiceControl()
+        with patch('voice_control.service.VoiceControlService', return_value=service) as factory:
+            await plugin.on_load(Mock(), PluginConfig('voice_control', {
+                'enabled': True, 'area': 'a', 'voice_channel': 'v', 'text_channel': 't',
+                'wake_model_path': '', 'hotwords': '', 'allowed_uids': '',
+            }, '', True))
+            settings = factory.call_args.args[1]
+            self.assertEqual(Path(settings['wake_model_path']), ROOT / 'plugins/voice_control/models/vosk-model-small-en-us-0.15')
+            self.assertEqual(settings['hotwords'], [])
+            self.assertEqual(settings['wake_volume'], 150)
+            await plugin.on_unload()
 
 
 class ActionsTests(unittest.IsolatedAsyncioTestCase):
@@ -161,6 +189,36 @@ class ActionsTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ChannelGuardTests(unittest.IsolatedAsyncioTestCase):
+    async def test_web_and_voice_stop_stays_only_in_standby_channel(self):
+        from music.music_web_control import WebControlExecutor
+        h = SimpleNamespace(_voice_wake_standby=('a', 'v'), _voice_channel_area='a',
+                            _voice_channel_id='v', _advance_playback_generation_locked=Mock(),
+                            voice=SimpleNamespace(available=True, stop_audio=AsyncMock()),
+                            _leave_current_voice_channel=AsyncMock())
+        executor = WebControlExecutor(h)
+        queue = AsyncMock()
+        await executor._handle_stop(queue)
+        h.voice.stop_audio.assert_awaited_once()
+        h._leave_current_voice_channel.assert_not_awaited()
+        queue.clear_queue.assert_awaited_once()
+        h._voice_channel_id = 'other'
+        await executor._handle_stop(queue)
+        h._leave_current_voice_channel.assert_awaited_once()
+
+    async def test_remote_speaker_uses_only_bound_channel_without_account_lookup(self):
+        from domain.playback.voice_participant import VoiceParticipant
+        from music.music import MusicHandler
+        handler = SimpleNamespace(voice=SimpleNamespace(available=True),
+                                  sender=SimpleNamespace(get_voice_channel_for_user=AsyncMock()),
+                                  _voice_channel_area='a', _voice_channel_id='v')
+        user = VoiceParticipant('123', 'a', 'v')
+        self.assertTrue(await MusicHandler._check_and_enter_voice_channel(
+            cast(Any, handler), user, 'text', 'a', expected_voice_channel='v'))
+        handler._voice_channel_id = 'other'
+        self.assertFalse(await MusicHandler._check_and_enter_voice_channel(
+            cast(Any, handler), user, 'text', 'a', expected_voice_channel='v'))
+        handler.sender.get_voice_channel_for_user.assert_not_awaited()
+
     async def test_late_playback_and_controls_cannot_follow_another_channel(self):
         from domain.playback import AreaId, AreaWebCommand
         from music.music import MusicHandler
@@ -207,15 +265,53 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         await service.close()
         self.assertIsNone(self.music._voice_wake_channel)
 
+    async def test_follow_channel_clears_previous_capture_and_candidates(self):
+        self.service.capture = True
+        self.service.listeners = {'123': Mock()}
+        self.service.owner = '123'
+        self.service.actions.pending['voice:123'] = (0, 1, [])
+        old_actions = self.service.actions
+        self.music._voice_channel_id = 'new'
+        self.voice.drain_voice_audio.return_value = {'generation': 2, 'users': [], 'frames': []}
+        await self.service.poll()
+        self.assertEqual(self.service.actions.voice_channel, 'new')
+        self.assertEqual(self.music._voice_wake_channel, ('a', 'new'))
+        self.assertEqual(old_actions.pending, {})
+        self.assertEqual(self.service.listeners, {})
+        self.assertIsNone(self.service.owner)
+        self.voice.configure_voice_capture.assert_any_await(False)
+        self.voice.configure_voice_capture.assert_any_await(True)
+        user = await self.service.resolve_user('123')
+        from domain.playback.voice_participant import VoiceParticipant
+        assert isinstance(user, VoiceParticipant)
+        self.assertEqual(user.channel, 'new')
+
+    async def test_stopping_returns_to_standby_even_after_initial_join(self):
+        self.service.joined_once = True
+        self.music._voice_channel_id = None
+        self.music._voice_channel_area = None
+        self.music.enter_voice_channel.return_value = {'status': True}
+        await self.service.poll()
+        self.music.enter_voice_channel.assert_awaited_once_with('v', 'a')
+
+    async def test_does_not_pull_bot_back_from_another_area(self):
+        self.music._voice_channel_id = 'elsewhere'
+        self.music._voice_channel_area = 'other-area'
+        await self.service.poll()
+        self.music.enter_voice_channel.assert_not_awaited()
+        self.voice.configure_voice_capture.assert_not_awaited()
+
     async def test_identity_resolution_is_channel_bound_and_allowlisted(self):
+        self.settings['allowed_uids'] = ['u']
         self.assertEqual(await self.service.resolve_user('123'), 'u')
         self.settings['allowed_uids'] = ['other']
         self.assertIsNone(await self.service.resolve_user('123'))
-        self.settings['allowed_uids'] = []
+        self.settings['allowed_uids'] = ['u']
         self.raw.get_voice_channel_for_user_strict.return_value = 'other'
         self.assertIsNone(await self.service.resolve_user('123'))
 
     async def test_slow_asr_cannot_execute_after_switch_or_member_leaves(self):
+        self.settings['allowed_uids'] = ['u']
         async def transcribe(pcm):
             self.music._voice_channel_id = 'other'
             return '停止播放'
@@ -232,6 +328,18 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         fake_asr.transcribe.side_effect = leave
         await self.service.handle('123', ('audio', bytes(3200)))
         self.action_run.assert_not_awaited()
+
+    async def test_default_allows_remote_speaker_without_account_lookup(self):
+        from domain.playback.voice_participant import VoiceParticipant
+        user = await self.service.resolve_user('123')
+        self.assertIsInstance(user, VoiceParticipant)
+        self.assertEqual(str(user), 'voice:123')
+        self.raw.get_voice_channel_members.assert_not_awaited()
+        self.raw.get_person_infos_batch.assert_not_awaited()
+        self.service.listeners['123'] = Mock()
+        await self.service.handle('123', ('wake', b''))
+        self.voice.play_wake_tone.assert_awaited_once()
+        self.assertEqual(self.voice.play_wake_tone.call_args.args, (150,))
 
     async def test_only_woken_speaker_audio_is_processed_and_close_disables_capture(self):
         self.service.capture = True

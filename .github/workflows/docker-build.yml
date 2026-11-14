@@ -105,6 +105,10 @@ jobs:
           browser_root = Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])
           assert not list(browser_root.glob("chromium_headless_shell-*"))
           assert not list(Path("/var/lib/apt/lists").glob("*_Packages*"))
+          from voice_control.recognition import WakeModel
+          wake_model = WakeModel("/app/plugins/voice_control/models/vosk-model-small-en-us-0.15")
+          assert wake_model.decoder() is not None
+          assert Path("/app/src/oopz_sdk/assets/voice/wake_sound.mp3").is_file()
           with sync_playwright() as playwright:
               browser = playwright.chromium.launch(
                   headless=True, channel="chromium", args=VOICE_STREAM_ARGS,
