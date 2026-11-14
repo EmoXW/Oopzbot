@@ -21,7 +21,7 @@
       "name": "area",
       "type": "string",
       "required": false,
-      "description": "允许语音控制的域 ID",
+      "description": "待命域 ID；文字点歌后可跟随机器人跨域语音控制",
       "default": "",
       "example": ""
     },

@@ -1,4 +1,4 @@
-"""Follow the bot within its configured area, returning to its standby channel."""
+"""Follow the bot across areas, returning to its configured standby channel."""
 from __future__ import annotations
 
 import asyncio
@@ -52,7 +52,7 @@ class VoiceControlService:
         if not self.settings['allowed_uids']:
             return VoiceParticipant(str(rtc_uid), self.actions.area, self.actions.voice_channel)
         raw = getattr(self.sender, 'raw', self.sender)
-        members = await raw.get_voice_channel_members(area=self.settings['area'])
+        members = await raw.get_voice_channel_members(area=self.actions.area)
         users = [str(item.get('uid') or '') for item in members.get(self.actions.voice_channel, [])
                  if not item.get('isBot')]
         users = [user for user in users if user]
@@ -66,7 +66,7 @@ class VoiceControlService:
         if self.settings['allowed_uids'] and user not in self.settings['allowed_uids']:
             return None
         # Recheck real channel membership after profile lookup / slow inference.
-        channel = await raw.get_voice_channel_for_user_strict(user, area=self.settings['area'])
+        channel = await raw.get_voice_channel_for_user_strict(user, area=self.actions.area)
         return user if channel == self.actions.voice_channel and self.in_channel() else None
 
     async def close(self):
@@ -104,21 +104,29 @@ class VoiceControlService:
 
     async def poll(self):
         current_channel = self.music._voice_channel_id
-        if (current_channel and self.music._voice_channel_area == self.settings['area']
-                and current_channel != self.actions.voice_channel):
+        current_area = self.music._voice_channel_area
+        text_channel = getattr(self.music, '_voice_text_channels', {}).get(current_area, '')
+        if current_area == self.settings['area']:
+            text_channel = text_channel or self.settings['text_channel']
+        elif current_area and not text_channel:
+            from core.area_config import get_area_registry
+            text_channel = get_area_registry().get(current_area).default_channel
+        if (current_channel and current_area and text_channel
+                and (current_area, current_channel, text_channel) !=
+                    (self.actions.area, self.actions.voice_channel, self.actions.text_channel)):
             if self.capture:
                 await self.voice.configure_voice_capture(False)
             self.capture = False
             self.listeners.clear()
             self.owner = None
             self.actions.pending.clear()
-            self.actions = MusicActions(self.music, self.sender, self.settings['area'],
-                                        current_channel, self.settings['text_channel'])
+            self.actions = MusicActions(self.music, self.sender, current_area,
+                                        current_channel, text_channel)
             self.generation = None
             self.after = time.time() * 1000
             LOG.info('语音唤醒已跟随机器人当前频道')
-        if current_channel and self.music._voice_channel_area == self.settings['area']:
-            self.music._voice_wake_channel = (self.settings['area'], current_channel)
+        if current_channel and current_area and self.in_channel():
+            self.music._voice_wake_channel = (current_area, current_channel)
         if not self.in_channel():
             if self.capture:
                 await self.voice.configure_voice_capture(False)
@@ -128,9 +136,9 @@ class VoiceControlService:
                 self.actions.pending.clear()
             if not self.music._voice_channel_id and time.monotonic() >= self.next_join:
                 self.next_join = time.monotonic() + 30
-                result = await self.music.enter_voice_channel(self.settings['voice_channel'], self.settings['area'])
+                result = await self.music.enter_standby_voice_channel(self.settings['voice_channel'], self.settings['area'])
                 self.joined_once = bool(result.get('status'))
-                if self.joined_once:
+                if self.joined_once or result.get('reason') == 'voice_channel_occupied':
                     self.next_join = 0.0
             return
         self.joined_once = True

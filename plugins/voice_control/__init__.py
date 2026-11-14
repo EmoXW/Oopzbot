@@ -30,7 +30,7 @@ class VoiceControl(BotModule):
             PluginConfigField('wake_volume', 150, cast=parse_int,
                               validator=lambda value: 0 <= value <= 200,
                               description='唤醒提示音音量（0~200，默认 150；100 为原始音量），独立于音乐音量'),
-            PluginConfigField('area', '', description='允许语音控制的域 ID'),
+            PluginConfigField('area', '', description='待命域 ID；文字点歌后可跟随机器人跨域语音控制'),
             PluginConfigField('voice_channel', '', description='待命语音频道 ID；点歌后跟随机器人当前频道，停止播放后回到此频道'),
             PluginConfigField('text_channel', '', description='点歌通知、选歌确认及帮助消息频道 ID'),
             PluginConfigField('wake_model_path', '', description='留空自动使用插件内置的英文唤醒模型；仅使用其他模型时填写路径'),

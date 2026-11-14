@@ -189,6 +189,28 @@ class ActionsTests(unittest.IsolatedAsyncioTestCase):
 
 
 class ChannelGuardTests(unittest.IsolatedAsyncioTestCase):
+    async def test_pending_standby_cannot_steal_new_cross_area_connection(self):
+        from music.music import MusicHandler
+        handler = MusicHandler.__new__(MusicHandler)
+        handler.voice = SimpleNamespace(available=True, join=AsyncMock())
+        handler._voice_lock = asyncio.Lock()
+        handler._voice_channel_id = None
+        handler._voice_channel_area = None
+        handler._leave_current_voice_channel = AsyncMock()
+        await handler._voice_lock.acquire()
+        pending = asyncio.create_task(handler.enter_standby_voice_channel('standby', 'home'))
+        await asyncio.sleep(0)
+        # The text-song request finishes its join while standby is waiting.
+        handler._voice_channel_id = 'lol'
+        handler._voice_channel_area = 'another-area'
+        handler._voice_lock.release()
+        result = await pending
+        self.assertFalse(result['status'])
+        self.assertEqual(handler._voice_channel_id, 'lol')
+        self.assertEqual(handler._voice_channel_area, 'another-area')
+        handler.voice.join.assert_not_awaited()
+        handler._leave_current_voice_channel.assert_not_awaited()
+
     async def test_web_and_voice_stop_stays_only_in_standby_channel(self):
         from music.music_web_control import WebControlExecutor
         h = SimpleNamespace(_voice_wake_standby=('a', 'v'), _voice_channel_area='a',
@@ -245,7 +267,8 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
                                      play_wake_tone=AsyncMock(return_value={'ok': True, 'after': 1000}),
                                      drain_voice_audio=AsyncMock())
         self.music = SimpleNamespace(voice=self.voice, _voice_channel_area='a', _voice_channel_id='v',
-                                     _playback_generation=1, enter_voice_channel=AsyncMock())
+                                     _playback_generation=1, enter_voice_channel=AsyncMock(),
+                                     enter_standby_voice_channel=AsyncMock())
         self.raw = SimpleNamespace(get_voice_channel_members=AsyncMock(return_value={'v': [{'uid': 'u'}]}),
                                    get_person_infos_batch=AsyncMock(return_value={'u': {'pid': 123}}),
                                    get_voice_channel_for_user_strict=AsyncMock(return_value='v'))
@@ -290,9 +313,9 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.service.joined_once = True
         self.music._voice_channel_id = None
         self.music._voice_channel_area = None
-        self.music.enter_voice_channel.return_value = {'status': True}
+        self.music.enter_standby_voice_channel.return_value = {'status': True}
         await self.service.poll()
-        self.music.enter_voice_channel.assert_awaited_once_with('v', 'a')
+        self.music.enter_standby_voice_channel.assert_awaited_once_with('v', 'a')
 
     async def test_does_not_pull_bot_back_from_another_area(self):
         self.music._voice_channel_id = 'elsewhere'
@@ -300,6 +323,37 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         await self.service.poll()
         self.music.enter_voice_channel.assert_not_awaited()
         self.voice.configure_voice_capture.assert_not_awaited()
+
+    async def test_cross_area_follow_uses_request_text_channel_and_speaker_scope(self):
+        from domain.playback.voice_participant import VoiceParticipant
+        old = self.service.actions
+        old.pending['voice:123'] = (0, 1, [])
+        self.music._voice_channel_area = 'other-area'
+        self.music._voice_channel_id = 'other-voice'
+        self.music._voice_text_channels = {'other-area': 'other-text'}
+        self.voice.drain_voice_audio.return_value = {'generation': 2, 'users': [], 'frames': []}
+        await self.service.poll()
+        actions = self.service.actions
+        self.assertEqual((actions.area, actions.voice_channel, actions.text_channel),
+                         ('other-area', 'other-voice', 'other-text'))
+        self.assertEqual(self.music._voice_wake_channel, ('other-area', 'other-voice'))
+        self.assertEqual(old.pending, {})
+        self.assertTrue(self.service.capture)
+        user = await self.service.resolve_user('123')
+        assert isinstance(user, VoiceParticipant)
+        self.assertEqual((user.area, user.channel), ('other-area', 'other-voice'))
+        await actions.say('test')
+        self.service.sender.send_message.assert_awaited_once_with('test', channel='other-text', area='other-area')
+        self.music.enter_standby_voice_channel.assert_not_awaited()
+
+    async def test_slow_asr_cannot_run_in_new_area(self):
+        async def transcribe(pcm):
+            self.music._voice_channel_area = 'other-area'
+            self.music._voice_channel_id = 'other-voice'
+            return '停止播放'
+        with patch.object(self.service, 'asr', SimpleNamespace(transcribe=AsyncMock(side_effect=transcribe))):
+            await self.service.handle('123', ('audio', bytes(3200)))
+        self.action_run.assert_not_awaited()
 
     async def test_identity_resolution_is_channel_bound_and_allowlisted(self):
         self.settings['allowed_uids'] = ['u']

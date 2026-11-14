@@ -141,6 +141,7 @@ class MusicHandler(PlaybackMixin):
         self._voice_channel_area: str | None = None
         self._voice_wake_channel: tuple[str, str] | None = None
         self._voice_wake_standby: tuple[str, str] | None = None
+        self._voice_text_channels: dict[str, str] = {}
         self._voice_enter_time: float = 0
         self._playlist_idle_since: float = 0
         self._web_link_released_due_to_idle: bool = False
@@ -332,11 +333,15 @@ class MusicHandler(PlaybackMixin):
     # 公共命令
     # ------------------------------------------------------------------
 
-    async def _do_enter_voice(self, voice_channel_id: str, area: str) -> dict:
+    async def _do_enter_voice(self, voice_channel_id: str, area: str, *, only_if_idle: bool = False) -> dict:
         """由 SDK Voice 完成 Oopz 进入、Agora 连接及失败回滚。"""
         if not self.voice or not self.voice.available:
             return {"error": "voice_unavailable"}
         async with self._voice_lock:
+            # A standby request may have waited behind a user's channel switch.
+            # Recheck inside the same lock instead of moving that new connection.
+            if only_if_idle and self._voice_channel_id:
+                return {"status": False, "reason": "voice_channel_occupied"}
             from_channel = self._voice_channel_id or ""
             from_area = self._voice_channel_area or ""
             if self._voice_channel_id and (
@@ -384,6 +389,10 @@ class MusicHandler(PlaybackMixin):
                     and user.area == area and user.channel == expected_voice_channel
                     and self._voice_channel_id == expected_voice_channel and self._voice_channel_area == area)
         voice_ch_id = await self.sender.get_voice_channel_for_user(user, area=area)
+        if voice_ch_id and area and channel:
+            if not hasattr(self, '_voice_text_channels'):
+                self._voice_text_channels = {}
+            self._voice_text_channels[str(area)] = str(channel)
         if expected_voice_channel is not None and (voice_ch_id != expected_voice_channel
                 or self._voice_channel_id != expected_voice_channel or self._voice_channel_area != area):
             return False
@@ -430,6 +439,12 @@ class MusicHandler(PlaybackMixin):
             return {"error": "missing_channel"}
 
         return await self._do_enter_voice(voice_channel_id, area)
+
+    async def enter_standby_voice_channel(self, voice_channel_id: str, area: str) -> dict:
+        """Join standby only if still idle when the voice transition lock is acquired."""
+        if not str(voice_channel_id or '').strip():
+            return {"error": "missing_channel"}
+        return await self._do_enter_voice(voice_channel_id, area, only_if_idle=True)
 
     async def _restore_volume_from_redis(self) -> None:
         """从 Redis 恢复用户上次设置的播放音量。
