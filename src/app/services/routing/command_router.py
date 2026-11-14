@@ -1,3 +1,6 @@
+from collections.abc import Awaitable, Callable
+from typing import cast
+
 from app.services.runtime import CommandRuntimeView
 from domain.routing.plain_music_commands import plain_music_command
 
@@ -18,6 +21,15 @@ class CommandRouter:
         if ctx.is_slash_command():
             await self._route_slash(ctx)
             return
+
+        if ctx.content.strip() in ('1', '2', '3', '4', '5'):
+            choose = getattr(self._services.interaction.music, 'handle_voice_pick', None)
+            callback = cast(Callable[[str, str, str, str], Awaitable[bool]], choose)
+            if callable(choose) and await callback(ctx.content, ctx.channel, ctx.area, ctx.user) is True:
+                await self._services.safety.recall_scheduler.schedule_user_message_recall(
+                    ctx.message_id, ctx.channel, ctx.area, ctx.timestamp,
+                )
+                return
 
         if getattr(self._runtime.plugins, "matches_plain_command", lambda _: False)(ctx.content) is True:
             await self._services.routing.mention.dispatch(ctx.content, ctx.channel, ctx.area, ctx.user)

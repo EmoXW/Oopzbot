@@ -38,19 +38,22 @@ class MusicActions:
         LOG.info('语音指令处理：类型 %s', command.get('action') or 'unrecognized')
         pending = self.pending.get(user)
         clean = normalize(text).replace(' ', '')
-        choice = re.fullmatch(r'(?:选择|播放)?第?([一二三123])首?', clean)
+        choice = re.fullmatch(r'(?:选择|播放)?第?([一二三四五12345])首?', clean)
         if not pending and (choice or clean in ('确认', '就这首')):
             await self.say('当前没有待确认的歌曲，请先说出歌名。')
             return
         if pending and (choice or clean in ('确认', '就这首')):
-            expires, generation, songs = self.pending.pop(user)
+            expires, generation, songs = pending
             if expires < time.monotonic() or generation != self.music._playback_generation:
+                self.pending.pop(user, None)
                 await self.say('选歌确认已过期，请重新说出歌名。')
                 return
-            index = {'一': 0, '二': 1, '三': 2, '1': 0, '2': 1, '3': 2}[choice[1]] if choice else 0
+            index = {'一': 0, '二': 1, '三': 2, '四': 3, '五': 4,
+                     '1': 0, '2': 1, '3': 2, '4': 3, '5': 4}[choice[1]] if choice else 0
             if index >= len(songs):
                 await self.say('没有这个选项，请重新点歌。')
                 return
+            self.pending.pop(user, None)
             await self.music.play_song_choice(songs[index], self.text_channel, self.area, user, expected_voice_channel=self.voice_channel)
             return
         if not command['recognized']:
@@ -66,7 +69,7 @@ class MusicActions:
             return
         if action == 'play':
             generation = self.music._playback_generation
-            songs = await self.music.search_candidates(params['query'], params['platform'], limit=3)
+            songs = (await self.music.search_candidates(params['query'], params['platform'], limit=5))[:5]
             LOG.info('语音点歌搜索完成：候选数 %s', len(songs))
             if not self.current() or generation != self.music._playback_generation:
                 return
@@ -85,7 +88,7 @@ class MusicActions:
             LOG.info('语音点歌等待选歌确认')
             if len(self.pending) > 64:
                 self.pending.pop(next(iter(self.pending)))
-            await self.say('请再次喊 GG Bot 后说“第一首 / 第二首 / 第三首”确认，45 秒内有效：\n' +
+            await self.say('请再次喊 GG Bot 后说“第一首”至“第五首”，或本人在此频道直接发送数字 1-5 选择，45 秒内有效：\n' +
                            '\n'.join(f'{index}. {song.get("name")} · {song.get("artists")}'
                                      for index, song in enumerate(songs, 1)))
             return

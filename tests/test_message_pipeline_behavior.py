@@ -159,6 +159,18 @@ class PlainMusicCommandTest(unittest.TestCase):
 
 
 class CommandRouterTest(unittest.IsolatedAsyncioTestCase):
+    async def test_plain_voice_choice_only_consumes_owned_pending_selection(self):
+        from app.services.routing.command_message_service import MessageContext
+        self.music.handle_voice_pick = AsyncMock(return_value=True)
+        ctx = MessageContext(raw={}, content='5', channel='channel', area='area',
+                             user='user-1', message_id='msg-1', timestamp='ts-1')
+        await self._build_router().route(ctx)
+        self.music.handle_voice_pick.assert_awaited_once_with('5', 'channel', 'area', 'user-1')
+        self.chat.handle_plain_chat.assert_not_awaited()
+        self.music.handle_voice_pick.return_value = False
+        await self._build_router().route(ctx)
+        self.chat.handle_plain_chat.assert_awaited_once()
+
     def setUp(self) -> None:
         self.mention = Mock()
         self.mention.dispatch = AsyncMock(return_value=False)

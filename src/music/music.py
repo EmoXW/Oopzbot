@@ -142,6 +142,7 @@ class MusicHandler(PlaybackMixin):
         self._voice_wake_channel: tuple[str, str] | None = None
         self._voice_wake_standby: tuple[str, str] | None = None
         self._voice_text_channels: dict[str, str] = {}
+        self._voice_control_service: Any = None
         self._voice_enter_time: float = 0
         self._playlist_idle_since: float = 0
         self._web_link_released_due_to_idle: bool = False
@@ -445,6 +446,12 @@ class MusicHandler(PlaybackMixin):
         if not str(voice_channel_id or '').strip():
             return {"error": "missing_channel"}
         return await self._do_enter_voice(voice_channel_id, area, only_if_idle=True)
+
+    async def select_voice_candidate(self, text: str, channel: str, area: str, user: str) -> bool:
+        service = self._voice_control_service
+        if service is None:
+            return False
+        return await service.select_text(text, channel, area, user)
 
     async def _restore_volume_from_redis(self) -> None:
         """从 Redis 恢复用户上次设置的播放音量。

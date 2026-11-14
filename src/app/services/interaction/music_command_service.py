@@ -1,6 +1,6 @@
 import contextlib
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 from app.services.runtime import CommandRuntimeView, music_of, sender_of
 from music.music import parse_platform_prefix
@@ -126,6 +126,13 @@ class MusicCommandService:
         self._runtime.services.interaction.selection.clear(user, channel, area)
         await self._music.play_song_choice(item, channel, area, user)
         return True
+
+    async def handle_voice_pick(self, text: str, channel: str, area: str, user: str) -> bool:
+        choose = getattr(self._music, 'select_voice_candidate', None)
+        if not callable(choose):
+            return False
+        callback = cast(Callable[[str, str, str, str], Awaitable[bool]], choose)
+        return await callback(text, channel, area, user) is True
 
     async def handle_mention(self, text: str, channel: str, area: str, user: str) -> bool:
         """处理 @bot 中文音乐指令。"""

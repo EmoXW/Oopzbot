@@ -282,8 +282,9 @@ class AsyncOopzGateway:
     ) -> GatewayResponse:
         area = self._default_area(area)
         channel = self._default_channel(channel)
-        try:
-            result = await self.bot.messages.send_message(
+
+        async def send(version: str):
+            return await self.bot.messages.send_message(
                 str(text),
                 area=area,
                 channel=channel,
@@ -295,8 +296,20 @@ class AsyncOopzGateway:
                 animated=bool(kwargs.get("animated", False)),
                 display_name=str(kwargs.get("displayName") or ""),
                 duration=int(kwargs.get("duration") or 0),
-                version=str(kwargs.get("version") or "v1"),
+                version=version,
             )
+
+        try:
+            version = str(kwargs.get("version") or "v1")
+            try:
+                result = await send(version)
+            except OopzApiError as exc:
+                # Retry only an explicit API rejection, never timeouts / uncertain sends.
+                if (version != 'v1' or kwargs.get('version')
+                        or '暂不支持发送此类型消息' not in str(exc)):
+                    raise
+                logger.info('旧版频道消息类型被拒绝，改用新版接口发送原消息')
+                result = await send('v2')
         except OopzError as exc:
             if is_sensitive_rejection(str(exc)):
                 raise SensitiveContentError(str(exc)) from exc

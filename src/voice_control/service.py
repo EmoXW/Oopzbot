@@ -45,6 +45,7 @@ class VoiceControlService:
         self.asr = LocalASR(self.settings['asr_url'], self.settings['asr_token'], self.settings['hotwords'])
         self.music._voice_wake_channel = (self.settings['area'], self.settings['voice_channel'])
         self.music._voice_wake_standby = (self.settings['area'], self.settings['voice_channel'])
+        self.music._voice_control_service = self
 
     async def resolve_user(self, rtc_uid):
         if not self.in_channel():
@@ -70,6 +71,8 @@ class VoiceControlService:
         return user if channel == self.actions.voice_channel and self.in_channel() else None
 
     async def close(self):
+        if getattr(self.music, '_voice_control_service', None) is self:
+            self.music._voice_control_service = None
         self.music._voice_wake_channel = None
         self.music._voice_wake_standby = None
         self.listeners.clear()
@@ -83,6 +86,27 @@ class VoiceControlService:
         self.capture = False
         if self.asr:
             await self.asr.close()
+
+    async def select_text(self, text, channel, area, user):
+        actions = self.actions
+        if (text.strip() not in ('1', '2', '3', '4', '5') or not actions.current()
+                or (area, channel) != (actions.area, actions.text_channel) or not actions.pending):
+            return False
+        key = user
+        if key not in actions.pending:
+            raw = getattr(self.sender, 'raw', self.sender)
+            try:
+                profile = await raw.get_person_detail_full(user)
+            except Exception:
+                return False
+            pid = str(profile.get('pid') or '')
+            if not pid:
+                return False
+            key = VoiceParticipant(pid, actions.area, actions.voice_channel)
+        if self.actions is not actions or not actions.current() or key not in actions.pending:
+            return False
+        await actions.run(text.strip(), key)
+        return True
 
     async def run(self):
         try:

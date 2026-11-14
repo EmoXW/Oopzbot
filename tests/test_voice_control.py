@@ -149,6 +149,16 @@ class ActionsTests(unittest.IsolatedAsyncioTestCase):
         await self.actions.run('第二首', 'u')
         self.assertEqual(self.music.play_song_choice.await_args.args[0]['id'], 2)
 
+    async def test_five_candidates_support_spoken_fifth_choice(self):
+        songs = [{'id': i, 'name': 'song' + str(i), 'artists': 'artist'} for i in range(1, 7)]
+        self.music.search_candidates.return_value = songs
+        await self.actions.run('播放晴天', 'u')
+        self.music.search_candidates.assert_awaited_once_with('晴天', 'netease', limit=5)
+        self.assertEqual(len(self.actions.pending['u'][2]), 5)
+        await self.actions.run('第五首', 'u')
+        self.assertEqual(self.music.play_song_choice.call_args.args[0]['id'], 5)
+        self.assertNotIn('u', self.actions.pending)
+
     async def test_stale_search_result_and_stale_confirmation_are_dropped(self):
         song = {'id': 1, 'name': '晴天', 'artists': '周杰伦'}
         async def switch(*args, **kwargs):
@@ -287,6 +297,20 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
         self.music._voice_wake_channel = ('a', 'v')
         await service.close()
         self.assertIsNone(self.music._voice_wake_channel)
+
+    async def test_text_number_selects_only_own_voice_candidates_in_same_channel(self):
+        from domain.playback.voice_participant import VoiceParticipant
+        key = VoiceParticipant('123', 'a', 'v')
+        self.service.actions.pending[key] = (1e20, 1, [{'id': 5}])
+        self.raw.get_person_detail_full = AsyncMock(return_value={'pid': '123'})
+        self.assertFalse(await self.service.select_text('5', 'wrong', 'a', 'u'))
+        self.raw.get_person_detail_full.assert_not_awaited()
+        self.raw.get_person_detail_full.return_value = {'pid': 'other'}
+        self.assertFalse(await self.service.select_text('5', 'text', 'a', 'other'))
+        self.action_run.assert_not_awaited()
+        self.raw.get_person_detail_full.return_value = {'pid': '123'}
+        self.assertTrue(await self.service.select_text('5', 'text', 'a', 'u'))
+        self.action_run.assert_awaited_once_with('5', key)
 
     async def test_follow_channel_clears_previous_capture_and_candidates(self):
         self.service.capture = True
