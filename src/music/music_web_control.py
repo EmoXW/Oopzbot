@@ -18,7 +18,7 @@ class WebControlExecutor:
     def __init__(self, handler):
         self.h = handler
 
-    async def execute(self, command: WebCommand, queue=None) -> bool:
+    async def execute(self, command: WebCommand, queue=None, *, expected_voice_channel: str | None = None) -> bool:
         logger.info("Web 控制命令: scope=%s action=%s", command.scope, command.action)
         try:
             if isinstance(command, GlobalWebCommand):
@@ -28,7 +28,8 @@ class WebControlExecutor:
                 return False
             async with self.h._playback_lock:
                 session = self.h._playback_snapshot_locked()
-                if session.area != command.area:
+                if (session.area != command.area
+                        or (expected_voice_channel is not None and session.channel != expected_voice_channel)):
                     return False
                 if command.action == "next":
                     await self._handle_next(queue, command.area.value, session)

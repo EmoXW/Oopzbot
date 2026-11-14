@@ -519,6 +519,7 @@ window.agoraJoin = async (appId, token, channelName, uid) => {
       codec: "vp8",
     });
 
+    window.agoraAttachVoiceCapture(client);
     await client.setClientRole("host");
 
     const expectedUid = uid === null || uid === undefined ? null : Number(uid);
@@ -539,6 +540,7 @@ window.agoraJoin = async (appId, token, channelName, uid) => {
         "assigned=", currentAgoraUid
       );
     }
+    await window.agoraResumeVoiceCapture();
     setState("joined");
 
     return {
@@ -551,6 +553,7 @@ window.agoraJoin = async (appId, token, channelName, uid) => {
 };
 
 window.agoraLeave = async () => {
+  window.agoraResetVoiceCapture();
   await stopCurrentPlayback({ bumpGen: true, nextState: "joined" });
 
   if (client) {
@@ -882,5 +885,6 @@ window.agoraGetStatus = () => {
   };
 };
 </script>
+<script src="voice_control.js"></script>
 </body>
 </html>

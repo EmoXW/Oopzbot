@@ -290,6 +290,16 @@ class SdkVoiceController:
     async def seek_audio(self, seconds: float) -> bool:
         return await self._voice.seek(seconds)
 
+    async def configure_voice_capture(self, enabled: bool):
+        await self._await_warmup()
+        return await self._voice.backend.configure_voice_capture(enabled)
+
+    async def drain_voice_audio(self):
+        return await self._voice.backend.drain_voice_audio()
+
+    async def play_wake_tone(self):
+        return await self._voice.backend.play_wake_tone()
+
     async def set_volume(self, volume: int) -> bool:
         return await self._voice.set_volume(volume)
 

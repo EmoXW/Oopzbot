@@ -45,6 +45,7 @@ COPY main.py /app/main.py
 COPY config.example.py /app/config.example.py
 COPY private_key.example.py /app/private_key.example.py
 COPY README.md /app/README.md
+COPY requirements-voice.txt requirements-voice-asr.txt /app/
 COPY src /app/src
 COPY plugins /app/plugins
 COPY tools /app/tools

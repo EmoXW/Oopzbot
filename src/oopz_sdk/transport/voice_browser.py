@@ -467,6 +467,15 @@ class BrowserVoiceTransport:
 
         return bool(result and result.get("ok"))
 
+    async def configure_voice_capture(self, enabled: bool):
+        return await self._run_on_browser("agoraEnableVoiceCapture", enabled)
+
+    async def drain_voice_audio(self):
+        return await self._run_on_browser("agoraDrainVoiceAudio")
+
+    async def play_wake_tone(self):
+        return await self._run_on_browser("agoraWakeTone")
+
     async def set_volume(self, volume: int) -> bool:
         result = await self._run_on_browser("agoraSetVolume", int(volume))
         return bool(result and result.get("ok"))

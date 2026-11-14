@@ -1,0 +1,77 @@
+{
+  "plugin_name": "voice_control",
+  "fields": [
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "required": false,
+      "description": "启用语音唤醒（需要可选依赖、模型及识别服务）",
+      "default": false,
+      "example": false
+    },
+    {
+      "name": "area",
+      "type": "string",
+      "required": false,
+      "description": "允许语音控制的域 ID",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "voice_channel",
+      "type": "string",
+      "required": false,
+      "description": "待命语音频道 ID，仅监听此频道",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "text_channel",
+      "type": "string",
+      "required": false,
+      "description": "点歌通知、选歌确认及帮助消息频道 ID",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "wake_model_path",
+      "type": "string",
+      "required": false,
+      "description": "机器人可读取的英文 Vosk 唤醒模型路径，相对路径基于项目根目录",
+      "default": "data/models/vosk-model-small-en-us-0.15",
+      "example": "data/models/vosk-model-small-en-us-0.15"
+    },
+    {
+      "name": "asr_url",
+      "type": "string",
+      "required": false,
+      "description": "本地 Fun-ASR-Nano 服务地址；原生运行可填 http://127.0.0.1:18767",
+      "default": "http://host.docker.internal:18767",
+      "example": "http://host.docker.internal:18767"
+    },
+    {
+      "name": "asr_token",
+      "type": "string",
+      "required": false,
+      "description": "本地识别服务访问密钥，需与服务端一致",
+      "default": "",
+      "example": ""
+    },
+    {
+      "name": "allowed_uids",
+      "type": "string[]",
+      "required": false,
+      "description": "允许语音控制的用户 UID，留空允许待命频道内所有已确认身份的用户",
+      "default": [],
+      "example": []
+    },
+    {
+      "name": "hotwords",
+      "type": "string[]",
+      "required": false,
+      "description": "歌手、歌名热词，每行一个，最多 40 个；仅在本地识别服务处理",
+      "default": [],
+      "example": []
+    }
+  ]
+}

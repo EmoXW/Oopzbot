@@ -48,6 +48,7 @@ node_modules/
 # === 测试（保留 tests 目录下的 .py 文件）===
 tests/**
 !tests/*.py
+!tests/voice_receiver.cjs
 
 # === 日志 ===
 logs/

@@ -305,3 +305,8 @@ python tools/create_plugin_scaffold.py demo_plugin
 ## 许可证
 
 MIT
+
+
+### 可选语音唤醒
+
+本地源码包含默认关闭的 `voice_control` 插件：GG Bot 唤醒、提示音、本地 Fun-ASR-Nano 与音乐命令。需要额外模型和本地识别服务，未启用时不影响原有播放。安装、配置与真实频道验收范围见 [语音控制说明](docs/VOICE_CONTROL.md)。

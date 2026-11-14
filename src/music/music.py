@@ -139,6 +139,7 @@ class MusicHandler(PlaybackMixin):
         self._play_duration: float = 0
         self._voice_channel_id: str | None = None
         self._voice_channel_area: str | None = None
+        self._voice_wake_channel: tuple[str, str] | None = None
         self._voice_enter_time: float = 0
         self._playlist_idle_since: float = 0
         self._web_link_released_due_to_idle: bool = False
@@ -362,7 +363,7 @@ class MusicHandler(PlaybackMixin):
             logger.info("Bot 已进入语音频道: %s", self.names.channel(voice_channel_id))
             return {"status": True, "sign": sign}
 
-    async def _check_and_enter_voice_channel(self, user: str, channel: str, area: str) -> bool:
+    async def _check_and_enter_voice_channel(self, user: str, channel: str, area: str, *, expected_voice_channel: str | None = None) -> bool:
         """
         检查用户是否在语音频道，若在则 Bot 进入该频道。
         若用户不在任何语音频道，发送提示并返回 False。
@@ -376,6 +377,9 @@ class MusicHandler(PlaybackMixin):
             return False
 
         voice_ch_id = await self.sender.get_voice_channel_for_user(user, area=area)
+        if expected_voice_channel is not None and (voice_ch_id != expected_voice_channel
+                or self._voice_channel_id != expected_voice_channel or self._voice_channel_area != area):
+            return False
         if not voice_ch_id:
             await self.sender.send_message(
                 "请先加入一个语音频道，Bot 会跟随你进入并放歌。",
@@ -576,8 +580,9 @@ class MusicHandler(PlaybackMixin):
             "user": user,
         }
 
-    async def play_song_choice(self, song: dict, channel: str, area: str, user: str) -> None:
+    async def play_song_choice(self, song: dict, channel: str, area: str, user: str, *, expected_voice_channel: str | None = None) -> None:
         """播放用户从候选列表中选中的歌曲。"""
+        guard = {"expected_voice_channel": expected_voice_channel} if expected_voice_channel is not None else {}
         platform = song.get("platform") or _PLATFORM_NETEASE
         p = self.platforms.get(platform)
         if not p:
@@ -637,10 +642,10 @@ class MusicHandler(PlaybackMixin):
 
         song_data = self._build_song_data_from_platform_data(data, platform, song_id, channel, area, user)
         self._kickoff_cover_prefetch(song_data)
-        if not await self._check_and_enter_voice_channel(user, channel, area):
+        if not await self._check_and_enter_voice_channel(user, channel, area, **guard):
             return
         user_name = self.names.user(user) if user else "未知用户"
-        result = await self._commit_song_request(song_data, prefix=f"{user_name} 从搜歌结果中选择了")
+        result = await self._commit_song_request(song_data, prefix=f"{user_name} 从搜歌结果中选择了", **guard)
         await self.sender.send_message(text=result["message"], attachments=result.get("attachments", []), channel=channel, area=area)
 
     async def play_song(self, keyword: str, platform: str, channel: str, area: str, user: str) -> None:
@@ -662,10 +667,12 @@ class MusicHandler(PlaybackMixin):
         attachments = result.get("attachments", [])
         await self.sender.send_message(text=text, attachments=attachments, channel=channel, area=area)
 
-    async def play_next(self, channel: str, area: str, user: str) -> None:
+    async def play_next(self, channel: str, area: str, user: str, *, expected_voice_channel: str | None = None) -> None:
         """播放队列中的下一首"""
         async with self._playback_lock:
             session = self._playback_snapshot_locked()
+            if expected_voice_channel is not None and session.channel != expected_voice_channel:
+                return
             if session.area is None or session.channel is None:
                 error = "Bot 当前不在语音频道，请先用 /bf 点歌或让 Bot 跟随进入语音频道。"
             elif session.area.value != str(area or "").strip():
@@ -799,9 +806,12 @@ class MusicHandler(PlaybackMixin):
             area=area,
         )
 
-    async def play_liked(self, channel: str, area: str, user: str, count: int = 1) -> None:
+    async def play_liked(self, channel: str, area: str, user: str, count: int = 1, *, expected_voice_channel: str | None = None) -> None:
         """从登录账号的喜欢列表中随机选歌播放"""
-        if not await self._check_and_enter_voice_channel(user, channel, area):
+        guard = {"expected_voice_channel": expected_voice_channel} if expected_voice_channel is not None else {}
+        if expected_voice_channel is not None:
+            count = 1
+        if not await self._check_and_enter_voice_channel(user, channel, area, **guard):
             return
         uid = await self.netease.get_user_id()
         if not uid:
@@ -832,7 +842,7 @@ class MusicHandler(PlaybackMixin):
 
             if success_count == 0:
                 self._kickoff_cover_prefetch(song_data)
-                result = await self._commit_song_request(song_data, prefix=prefix)
+                result = await self._commit_song_request(song_data, prefix=prefix, **guard)
                 first_text = result["message"]
                 first_attachments = result.get("attachments", [])
             else:
@@ -1274,12 +1284,13 @@ class MusicHandler(PlaybackMixin):
             return False
         return command.area == snapshot.area
 
-    async def _execute_web_command(self, command, queue=None) -> bool:
+    async def _execute_web_command(self, command, queue=None, *, expected_voice_channel: str | None = None) -> bool:
         """执行单条 Web 控制命令"""
         # 兼容测试中 __new__ 构造未执行 __init__ 的场景
         if not hasattr(self, "_web_control") or self._web_control is None:
             self._web_control = WebControlExecutor(self)
-        return await self._web_control.execute(command, queue=queue)
+        guard = {"expected_voice_channel": expected_voice_channel} if expected_voice_channel is not None else {}
+        return await self._web_control.execute(command, queue=queue, **guard)
 
 
     # ------------------------------------------------------------------
@@ -1508,7 +1519,7 @@ class MusicHandler(PlaybackMixin):
             text = f"![IMAGEw{att['width']}h{att['height']}]({att['fileKey']})\n" + text
         return text
 
-    async def _commit_song_request(self, song_data: dict, prefix: str = "") -> dict:
+    async def _commit_song_request(self, song_data: dict, prefix: str = "", *, expected_voice_channel: str | None = None) -> dict:
         """将已准备好的歌曲请求正式提交为播放或排队。prefix 用于自定义通知前缀。"""
         song_data = dict(song_data)
 
@@ -1518,7 +1529,8 @@ class MusicHandler(PlaybackMixin):
 
         async with self._playback_lock:
             session = self._playback_snapshot_locked()
-            if session.area is None or session.area.value != area:
+            if (session.area is None or session.area.value != area
+                    or (expected_voice_channel is not None and session.channel != expected_voice_channel)):
                 return {
                     "code": "playback_session_changed",
                     "message": "播放域已发生变化，本次点歌未提交，请重试。",
