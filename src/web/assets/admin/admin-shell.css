@@ -183,7 +183,7 @@ body[data-admin-page]::after {
   background: linear-gradient(90deg,
     transparent 5%,
     var(--accent-faint) 20%,
-    var(--accent) 50%,
+    var(--accent-color) 50%,
     var(--accent-faint) 80%,
     transparent 95%
   );
@@ -239,7 +239,7 @@ thead th,
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%);
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent-color) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -326,7 +326,7 @@ thead th,
 }
 
 .nav-link.is-active {
-  color: var(--accent);
+  color: var(--accent-color);
   text-shadow: 0 0 12px var(--accent-glow);
 }
 
@@ -573,7 +573,7 @@ thead th,
 
 .metric-card--featured .metric-card__value {
   font-family: var(--font-numbers);
-  background: linear-gradient(135deg, var(--accent) 20%, #fff 80%);
+  background: linear-gradient(135deg, var(--accent-color) 20%, #fff 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -689,7 +689,7 @@ select {
 .btn-primary {
   border-color: rgba(139, 220, 250, 0.4);
   background: linear-gradient(135deg, rgba(139, 220, 250, 0.2), rgba(139, 220, 250, 0.1));
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .btn-primary:hover {
@@ -770,7 +770,7 @@ input[readonly] {
 input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--accent-color);
   cursor: pointer;
 }
 
@@ -1007,7 +1007,7 @@ select.select--compact {
 .cs-option.is-selected {
   background: rgba(139, 220, 250, 0.1);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .cs-option.is-selected::after {
@@ -1097,7 +1097,7 @@ select.select--compact {
 }
 
 .cfg-tab.is-active {
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .cfg-tab.is-active::after {
@@ -1107,7 +1107,7 @@ select.select--compact {
   left: 12px;
   right: 12px;
   height: 2px;
-  background: var(--accent);
+  background: var(--accent-color);
   border-radius: 2px 2px 0 0;
   box-shadow: 0 0 12px var(--accent-glow);
 }
@@ -1151,7 +1151,7 @@ select.select--compact {
 }
 
 .field:focus-within label {
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .field__hint {
@@ -1243,7 +1243,7 @@ select.select--compact {
 }
 
 .text-link {
-  color: var(--accent);
+  color: var(--accent-color);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -1411,7 +1411,7 @@ select.select--compact {
 }
 
 .index-link:hover {
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .status-text,
@@ -1477,7 +1477,7 @@ select.select--compact {
   font-family: var(--font-display);
   background: rgba(139, 220, 250, 0.08);
   border-color: rgba(139, 220, 250, 0.15);
-  color: var(--accent);
+  color: var(--accent-color);
 }
 
 .table-shell {
@@ -1528,7 +1528,7 @@ tbody tr:nth-child(even) {
 
 .table-row--current {
   background: rgba(139, 220, 250, 0.06) !important;
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--accent-color);
 }
 
 .table-emphasis {
@@ -1778,7 +1778,7 @@ a:not(.nav-link):not(.index-link) {
 }
 
 a:not(.nav-link):not(.index-link):hover {
-  color: var(--accent);
+  color: var(--accent-color);
   text-decoration-color: var(--accent-soft);
 }
 

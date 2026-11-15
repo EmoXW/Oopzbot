@@ -1,41 +1,26 @@
-      <section id="panel" class="hidden dashboard-grid">
-        <div class="dashboard-grid__main">
-          <article class="surface-card">
-            <div class="action-row">
-              <span id="overviewLiveHint" class="micro-status is-warning">等待连接</span>
-              <button class="btn btn-primary" type="button" data-action="refresh-overview">同步</button>
-              <button class="btn btn-ghost" type="button" data-action="stream-resume">恢复实时流</button>
-              <button class="btn btn-ghost" type="button" data-action="stream-pause">暂停实时流</button>
-            </div>
-          </article>
-
-          <section class="metrics-grid">
-            <article class="metric-card metric-card--featured">
-              <div class="metric-card__label">累计播放</div>
-              <div id="sTotal" class="metric-card__value">0</div>
-            </article>
-            <div class="metric-stack">
-              <article class="summary-card">
-                <div class="summary-card__label">Redis</div>
-                <div id="sRedis" class="summary-card__value">-</div>
-              </article>
-              <article class="summary-card">
-                <div class="summary-card__label">运行时长（秒）</div>
-                <div id="sUp" class="summary-card__value">0</div>
-              </article>
-              <article class="summary-card">
-                <div class="summary-card__label">队列长度</div>
-                <div id="sQueue" class="summary-card__value">0</div>
-              </article>
-              <article class="summary-card">
-                <div class="summary-card__label">今日消息</div>
-                <div id="sTodayMsg" class="summary-card__value">0</div>
-              </article>
-              <article class="summary-card">
-                <div class="summary-card__label">今日活跃</div>
-                <div id="sActiveUsers" class="summary-card__value">0</div>
-              </article>
-            </div>
-          </section>
-        </div>
+      <section id="panel" class="hidden table-stack">
+        <article class="surface-card dashboard-toolbar">
+          <div class="overview-intro"><h2>实时概览</h2><p>机器人连接、播放队列和今日社区活动。</p></div>
+          <div class="action-row">
+            <span id="overviewLiveHint" class="micro-status is-warning">等待连接</span>
+            <button class="btn btn-ghost" type="button" data-action="stream-resume">恢复实时流</button>
+            <button class="btn btn-ghost" type="button" data-action="stream-pause">暂停实时流</button>
+          </div>
+        </article>
+        <section class="dashboard-kpis" aria-label="运行指标">
+          <article class="metric-card"><div class="metric-card__label">累计播放</div><div id="sTotal" class="metric-card__value">0</div><p class="kpi-footer">已记录的歌曲播放次数</p></article>
+          <article class="metric-card"><div class="metric-card__label">Redis 连接</div><div id="sRedis" class="metric-card__value">-</div><p class="kpi-footer">队列与运行状态存储</p></article>
+          <article class="metric-card"><div class="metric-card__label">运行时长</div><div id="sUp" class="metric-card__value">0</div><p class="kpi-footer">秒 · 自本次启动起</p></article>
+          <article class="metric-card"><div class="metric-card__label">播放队列</div><div id="sQueue" class="metric-card__value">0</div><p class="kpi-footer">首 · 等待播放的歌曲</p></article>
+          <article class="metric-card"><div class="metric-card__label">今日消息</div><div id="sTodayMsg" class="metric-card__value">0</div><p class="kpi-footer">今日收到的消息数量</p></article>
+          <article class="metric-card"><div class="metric-card__label">今日活跃成员</div><div id="sActiveUsers" class="metric-card__value">0</div><p class="kpi-footer">人 · 今日参与互动的成员</p></article>
+        </section>
+        <article class="surface-card">
+          <div class="section-head"><h2 class="section-title">常用管理</h2><p class="section-copy">快速进入日常使用的工作区。</p></div>
+          <div class="quick-links">
+            <a class="quick-link" href="/admin/music"><strong>音乐与队列 →</strong><span>搜索歌曲、控制播放并管理队列。</span></a>
+            <a class="quick-link" href="/admin/areas"><strong>域与频道 →</strong><span>管理域配置、频道和入域邀请。</span></a>
+            <a class="quick-link" href="/admin/plugins"><strong>插件配置 →</strong><span>管理插件、上传更新和调整配置。</span></a>
+          </div>
+        </article>
       </section>

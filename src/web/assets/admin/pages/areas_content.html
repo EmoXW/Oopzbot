@@ -306,7 +306,7 @@
           transition: border-color .15s, box-shadow .15s, transform .12s;
         }
         .a-voice-user:hover {
-          border-color: var(--accent, #d4a058);
+          border-color: var(--accent-color);
           box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
           transform: translateY(-1px);
         }
@@ -335,8 +335,8 @@
           flex-shrink: 0; padding: 4px 12px;
           font-size: 12px; font-weight: 700; line-height: 18px;
           color: #fff; cursor: pointer;
-          background: var(--accent, #d4a058);
-          border: 1px solid var(--accent, #d4a058);
+          background: var(--accent-color);
+          border: 1px solid var(--accent-color);
           border-radius: 8px; transition: filter .15s, transform .1s;
         }
         .a-voice-user__move:hover { filter: brightness(1.08); }
@@ -377,8 +377,8 @@
           cursor: pointer; user-select: none; transition: border-color .15s, background .15s;
         }
         .a-am-item:hover { border-color: var(--ink-faint); }
-        .a-am-item:has(input:checked) { border-color: var(--accent, #d4a058); background: rgba(212,160,88,.08); }
-        .a-am-item input[type="checkbox"] { accent-color: var(--accent, #d4a058); margin: 0; }
+        .a-am-item:has(input:checked) { border-color: var(--accent-color); background: rgba(212,160,88,.08); }
+        .a-am-item input[type="checkbox"] { accent-color: var(--accent-color); margin: 0; }
         .a-am-dot {
           width: 6px; height: 6px; border-radius: 50%;
           background: #5eead4; flex-shrink: 0;

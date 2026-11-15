@@ -911,7 +911,11 @@ class WebPlayerAdminTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIn('/admin-assets/admin-shell.js', response.text)
                     self.assertIn('class="shell-topbar"', response.text)
                     self.assertIn('id="topNav"', response.text)
-                    self.assertIn('id="mobileNav"', response.text)
+                    self.assertIn('id="adminSidebar"', response.text)
+                    self.assertIn('id="sidebarToggle"', response.text)
+                    self.assertIn('id="sidebarScrim"', response.text)
+                    self.assertIn('/admin-assets/admin-theme.css', response.text)
+                    self.assertIn('/admin-assets/admin-dujiao.css', response.text)
                     self.assertIn('id="topStatus"', response.text)
 
 

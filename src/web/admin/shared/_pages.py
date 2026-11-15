@@ -35,8 +35,8 @@ _ADMIN_PAGES: dict[str, dict[str, Any]] = {
     "dashboard": {
         "page_title": "后台总览",
         "page_id": "dashboard",
-        "brand_title": "后台管理",
-        "brand_copy": "顶部主导航、数据优先、专业 SaaS 工作台。",
+        "brand_title": "运行总览",
+        "brand_copy": "查看机器人运行状态、播放队列与今日活动。",
         "topbar_actions": [
             {"action": "refresh-overview", "label": "刷新概览"},
         ],
@@ -48,7 +48,7 @@ _ADMIN_PAGES: dict[str, dict[str, Any]] = {
         "page_title": "音乐管理",
         "page_id": "music",
         "brand_title": "音乐管理",
-        "brand_copy": "把播放控制、搜索加歌和队列调度整理成标准运营面板。",
+        "brand_copy": "搜索歌曲、控制播放并管理当前域的播放队列。",
         "topbar_actions": [
             {"action": "refresh-queue", "label": "刷新队列"},
         ],
@@ -60,7 +60,7 @@ _ADMIN_PAGES: dict[str, dict[str, Any]] = {
         "page_title": "配置中心",
         "page_id": "config",
         "brand_title": "配置中心",
-        "brand_copy": "把长表单整理成章节化配置工作台，保留原字段和保存接口。",
+        "brand_copy": "管理机器人账号、音乐服务和自动化行为。",
         "topbar_actions": [
             {"action": "refresh-config", "label": "刷新配置"},
             {"action": "reset-overrides", "label": "恢复运行配置"},
@@ -74,7 +74,7 @@ _ADMIN_PAGES: dict[str, dict[str, Any]] = {
         "page_title": "统计页",
         "page_id": "stats",
         "brand_title": "统计页",
-        "brand_copy": "让摘要、榜单和危险操作形成稳定阅读顺序，而不是只摆一张表。",
+        "brand_copy": "查看播放数据、热门歌曲与历史记录。",
         "topbar_actions": [
             {"action": "refresh-stats", "label": "刷新统计"},
             {"action": "clear-history", "label": "清空历史", "variant": "danger"},
@@ -87,7 +87,7 @@ _ADMIN_PAGES: dict[str, dict[str, Any]] = {
         "page_title": "系统页",
         "page_id": "system",
         "brand_title": "系统页",
-        "brand_copy": "把播放器入口、系统快照和实时日志拆成明确的运维层级。",
+        "brand_copy": "查看播放器链接、系统信息与运行日志。",
         "topbar_actions": [
             {"action": "refresh-system", "label": "刷新系统信息"},
             {"action": "refresh-logs", "label": "刷新日志"},

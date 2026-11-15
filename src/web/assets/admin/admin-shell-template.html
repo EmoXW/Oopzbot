@@ -3,61 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <title>$page_title</title>
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/lige47/QuanX-icon-rule/main/icon/06jichang/NutBit.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/admin-assets/admin-shell.css?v=23" />
+  <script>
+    try {
+      const theme = localStorage.getItem('oopz-admin-theme');
+      document.documentElement.classList.toggle('dark', theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+      const collapsed = localStorage.getItem('oopz-admin-sidebar');
+      document.documentElement.dataset.sidebarCollapsed = collapsed === null ? String(innerWidth < 1280) : collapsed;
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="/admin-assets/admin-shell.css?v=24" />
+  <link rel="stylesheet" href="/admin-assets/admin-theme.css?v=1" />
+  <link rel="stylesheet" href="/admin-assets/admin-dujiao.css?v=1" />
 </head>
-<body data-admin-page="$page_id">
+<body data-admin-page="$page_id" data-authenticated="false">
+  <a class="skip-link" href="#mainContent">跳转到主要内容</a>
   <div class="shell-app">
-    <header class="shell-topbar">
-      <div class="topbar-main">
-        <div class="brand-lockup">
-          <p class="brand-lockup__eyebrow">Oopz Bot Admin</p>
-          <h1 class="brand-lockup__title">$brand_title</h1>
-          <p class="brand-lockup__copy">$brand_copy</p>
-        </div>
-        <div class="topbar-actions">
-          <span id="topStatus" class="status-text is-warning">等待登录</span>
-          $topbar_actions
-          <button class="btn" type="button" data-action="logout">退出登录</button>
-        </div>
-      </div>
-      <div class="topbar-nav-row">
-        <nav id="topNav" class="top-nav" aria-label="后台导航"></nav>
-      </div>
-    </header>
-
-    <div class="mobile-nav-shell">
-      <div class="action-row" style="margin-bottom: 10px;">
-        <span id="mobileStatus" class="status-text is-warning">等待登录</span>
-      </div>
-      <nav id="mobileNav" class="mobile-nav" aria-label="移动端后台导航"></nav>
-    </div>
-
-    <main class="shell-main">
-      <section id="loginCard" class="auth-stage">
-        <article class="auth-card">
-          <h3 class="auth-card__title">$login_title</h3>
-          <p class="auth-card__copy">$login_copy</p>
-          <div class="stack" style="margin-top: 24px;">
-            <input id="pwd" type="password" placeholder="请输入后台密码" />
-            <div class="action-row">
-              <button class="btn btn-primary" type="button" data-action="login">$login_button</button>
-            </div>
-            <div id="loginMsg" class="msg"></div>
+    <button id="sidebarScrim" class="sidebar-scrim" type="button" data-shell-action="close-nav" aria-label="关闭导航" hidden></button>
+    <aside id="adminSidebar" class="shell-sidebar" aria-label="管理导航">
+      <a class="sidebar-brand" href="/admin" aria-label="Oopz Bot 管理后台首页">
+        <span class="sidebar-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="7" width="16" height="13" rx="4"/><path d="M12 7V3M9 3h6M1 12v4m22-4v4M8 16h8"/><circle cx="8.5" cy="11.5" r=".8"/><circle cx="15.5" cy="11.5" r=".8"/></svg></span>
+        <span class="sidebar-brand-text"><strong>Oopz Bot</strong><small>管理控制台</small></span>
+      </a>
+      <button class="shell-icon-btn sidebar-mobile-close" type="button" data-shell-action="close-nav" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <nav id="topNav" class="sidebar-nav" aria-label="后台页面"></nav>
+      <footer class="sidebar-footer"><span class="sidebar-footer-dot" aria-hidden="true"></span><span class="sidebar-footer-text">Oopz Bot 工作区</span><span id="mobileStatus" class="visually-hidden">等待登录</span><button class="shell-icon-btn sidebar-logout" type="button" data-action="logout" aria-label="退出登录"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H4v14h5m5-14 5 7-5 7m-6-7h11"/></svg></button></footer>
+    </aside>
+    <div class="shell-workspace">
+      <header class="shell-topbar">
+        <div class="topbar-main">
+          <div class="topbar-location">
+            <button id="sidebarToggle" class="shell-icon-btn" type="button" data-shell-action="toggle-nav" aria-label="切换导航" aria-controls="adminSidebar" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+            <span class="topbar-divider" aria-hidden="true"></span><span class="workspace-label">工作区</span><span class="breadcrumb-divider" aria-hidden="true">/</span><span class="breadcrumb-current">$page_title</span>
           </div>
-        </article>
-      </section>
-
+          <div class="topbar-tools">
+            <span id="topStatus" class="status-text is-warning">等待登录</span>
+            <button id="themeToggle" class="shell-icon-btn" type="button" data-shell-action="theme" aria-label="切换主题"></button>
+            <button class="btn btn-ghost logout-button" type="button" data-action="logout">退出登录</button>
+          </div>
+        </div>
+      </header>
+      <main id="mainContent" class="shell-main" tabindex="-1">
+        <section class="page-heading">
+          <div><h1>$brand_title</h1><p>$brand_copy</p></div>
+          <div class="page-actions">$topbar_actions</div>
+        </section>
+        <section id="loginCard" class="auth-stage">
+          <article class="auth-card">
+            <span class="auth-eyebrow">OOPZ BOT ADMIN</span>
+            <h2 class="auth-card__title">$login_title</h2>
+            <p class="auth-card__copy">$login_copy</p>
+            <div class="stack">
+              <div class="field"><label for="pwd">管理密码</label><input id="pwd" type="password" autocomplete="current-password" placeholder="请输入后台密码" /></div>
+              <button class="btn btn-primary" type="button" data-action="login">$login_button</button>
+              <div id="loginMsg" class="msg" role="status" aria-live="polite"></div>
+            </div>
+          </article>
+        </section>
 $page_content
-    </main>
+      </main>
+    </div>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="/admin-assets/admin-shell.js?v=17"></script>
+  <script src="/admin-assets/admin-shell.js?v=18"></script>
   <script>
 $page_script
   </script>

@@ -129,15 +129,161 @@
     );
   }
 
+  const NAV_GROUPS = [
+    { key: "workspace", label: "工作台", pages: ["dashboard", "music", "stats", "activity"] },
+    { key: "community", label: "社区管理", pages: ["members", "areas", "friends", "scheduler"] },
+    { key: "settings", label: "系统设置", pages: ["config", "plugins", "setup", "system"] },
+  ];
+  const NAV_ICONS = {
+    dashboard: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    music: '<path d="M9 18V5l12-2v13M9 9l12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    stats: '<path d="M4 20V10m8 10V4m8 16v-8"/>',
+    activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+    scheduler: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-11 4h4"/>',
+    members: '<circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-16a3 3 0 0 1 0 6m4 10v-2a6 6 0 0 0-3-5"/>',
+    areas: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M17 3v7m-3-3h7M3 17h7"/>',
+    friends: '<path d="M20 21v-2a7 7 0 0 0-14 0v2M3 8h4m-2-2v4"/><circle cx="13" cy="7" r="4"/>',
+    config: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',
+    plugins: '<path d="M9 3v4m6-4v4M7 7h10v4a5 5 0 0 1-10 0V7Zm5 9v5"/>',
+    setup: '<path d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7l8-4Z"/><path d="m8 12 3 3 5-6"/>',
+    system: '<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01"/>',
+  };
+  function lineIcon(content) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + content + '</svg>';
+  }
+  function readPreference(key, fallback) {
+    try { return localStorage.getItem(key) ?? fallback; } catch (_) { return fallback; }
+  }
+  function savePreference(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+  }
   function getNavMarkup(currentPage) {
-    return (
-      '<div class="top-nav__marker"></div>' +
-      NAV_ITEMS.map((item) => {
-        const activeClass = item.key === currentPage ? " is-active" : "";
-        const current = item.key === currentPage ? ' aria-current="page"' : "";
-        return `<a class="nav-link${activeClass}" href="${item.href}" data-nav-key="${item.key}"${current}>${item.label}</a>`;
-      }).join("")
-    );
+    let groups = {};
+    try { groups = JSON.parse(readPreference("oopz-admin-nav-groups", "{}")); } catch (_) {}
+    return NAV_GROUPS.map((group) => {
+      const expanded = group.pages.includes(currentPage) || groups[group.key] !== false;
+      const links = group.pages.map((key) => {
+        const item = NAV_ITEMS.find((entry) => entry.key === key);
+        const current = key === currentPage;
+        return '<a class="nav-link' + (current ? ' is-active' : '') + '" href="' + item.href + '" title="' + item.label + '" aria-label="' + item.label + '" data-nav-key="' + key + '"' + (current ? ' aria-current="page"' : '') + '>' + lineIcon(NAV_ICONS[key]) + '<span class="nav-label">' + item.label + '</span></a>';
+      }).join("");
+      return '<section class="nav-group"><button class="nav-group-toggle" type="button" data-shell-group="' + group.key + '" aria-expanded="' + expanded + '" aria-controls="nav-group-' + group.key + '"><span>' + group.label + '</span>' + lineIcon('<path d="m6 9 6 6 6-6"/>') + '</button><div id="nav-group-' + group.key + '" class="nav-group-items"' + (expanded ? '' : ' hidden') + '>' + links + '</div></section>';
+    }).join("");
+  }
+
+  function initWorkspace() {
+    if (document.body.dataset.workspaceBound) return;
+    document.body.dataset.workspaceBound = "1";
+    const root = document.documentElement;
+    const sidebar = byId("adminSidebar"), toggle = byId("sidebarToggle"), scrim = byId("sidebarScrim");
+    const mobile = window.matchMedia("(max-width: 767px)");
+    const themeButton = byId("themeToggle");
+    let themePreference = readPreference("oopz-admin-theme", "");
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+    function syncTheme() {
+      const dark = themePreference ? themePreference === "dark" : systemTheme.matches;
+      root.classList.toggle("dark", dark);
+      if (window.Chart) {
+        const styles = getComputedStyle(root);
+        const text = styles.getPropertyValue('--ink-faint').trim();
+        const border = styles.getPropertyValue('--line').trim();
+        Object.values(window.Chart.instances || {}).forEach((chart) => {
+          Object.values(chart.options.scales || {}).forEach((scale) => {
+            if (scale.ticks) scale.ticks.color = text;
+            if (scale.grid) scale.grid.color = border;
+          });
+          if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = text;
+          chart.update('none');
+        });
+      }
+      if (themeButton) {
+        themeButton.innerHTML = lineIcon(dark ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>' : '<path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>');
+        themeButton.setAttribute("aria-label", dark ? "切换为浅色主题" : "切换为深色主题");
+        themeButton.title = themeButton.getAttribute("aria-label");
+      }
+    }
+    function setMobileNav(open) {
+      const wasOpen = root.dataset.navOpen === "true";
+      root.dataset.navOpen = String(open);
+      if (scrim) scrim.hidden = !open;
+      const workspace = document.querySelector(".shell-workspace");
+      if (workspace) workspace.inert = open;
+      if (sidebar) sidebar.inert = mobile.matches && !open;
+      if (toggle) toggle.setAttribute("aria-expanded", mobile.matches ? String(open) : String(root.dataset.sidebarCollapsed !== "true"));
+      if (open) requestAnimationFrame(() => sidebar?.querySelector("button, a")?.focus());
+      else if (wasOpen) toggle?.focus();
+    }
+    document.querySelectorAll('.file-upload input[type="file"]').forEach((input) => {
+      const name = input.closest('.file-upload').querySelector('.file-upload__name');
+      input.addEventListener('change', () => {
+        const label = input.files?.length ? Array.from(input.files).map((file) => file.name).join('、') : '未选择文件';
+        if (name) { name.textContent = label; name.title = label; }
+      });
+    });
+    syncTheme();
+    systemTheme.addEventListener("change", () => { if (!themePreference) syncTheme(); });
+    setMobileNav(false);
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-shell-action]");
+      if (button) {
+        const action = button.dataset.shellAction;
+        if (action === "theme") {
+          themePreference = root.classList.contains("dark") ? "light" : "dark";
+          savePreference("oopz-admin-theme", themePreference); syncTheme();
+        } else if (action === "close-nav") setMobileNav(false);
+        else if (action === "toggle-nav") {
+          if (mobile.matches) setMobileNav(root.dataset.navOpen !== "true");
+          else {
+            root.dataset.sidebarCollapsed = String(root.dataset.sidebarCollapsed !== "true");
+            savePreference("oopz-admin-sidebar", root.dataset.sidebarCollapsed);
+            toggle?.setAttribute("aria-expanded", String(root.dataset.sidebarCollapsed !== "true"));
+          }
+        }
+      }
+      const groupButton = event.target.closest("[data-shell-group]");
+      if (groupButton) {
+        const expanded = groupButton.getAttribute("aria-expanded") !== "true";
+        groupButton.setAttribute("aria-expanded", String(expanded));
+        byId(groupButton.getAttribute("aria-controls")).hidden = !expanded;
+        let groups = {};
+        try { groups = JSON.parse(readPreference("oopz-admin-nav-groups", "{}")); } catch (_) {}
+        groups[groupButton.dataset.shellGroup] = expanded;
+        savePreference("oopz-admin-nav-groups", JSON.stringify(groups));
+      }
+      if (mobile.matches && event.target.closest(".sidebar-nav a")) setMobileNav(false);
+    });
+    mobile.addEventListener("change", () => setMobileNav(false));
+    window.addEventListener("resize", () => {
+      if (readPreference("oopz-admin-sidebar", null) === null) root.dataset.sidebarCollapsed = String(innerWidth < 1280);
+    });
+    let modal = null, returnFocus = null, lastFocus = null;
+    const focusables = (element) => Array.from(element.querySelectorAll('a[href],button:not(:disabled),input:not(:disabled):not([type="hidden"]),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')).filter((element) => element.getClientRects().length);
+    document.addEventListener("focusin", (event) => { if (!event.target.closest(".m-modal")) lastFocus = event.target; });
+    new MutationObserver(() => {
+      const active = Array.from(document.querySelectorAll('.m-modal.is-open')).pop() || null;
+      if (active === modal) return;
+      if (active) {
+        returnFocus = lastFocus; modal = active;
+        requestAnimationFrame(() => { if (modal === active && !active.contains(document.activeElement)) (focusables(active)[0] || active).focus(); });
+      } else {
+        modal = null;
+        if (returnFocus?.isConnected) returnFocus.focus();
+        returnFocus = null;
+      }
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    document.addEventListener("keydown", (event) => {
+      const drawerOpen = mobile.matches && root.dataset.navOpen === "true";
+      if (event.key === "Escape") {
+        if (drawerOpen) { event.preventDefault(); setMobileNav(false); }
+        else if (modal) { event.preventDefault(); modal.querySelector('.m-modal__close')?.click(); }
+      }
+      const trap = modal || (drawerOpen ? sidebar : null);
+      if (event.key !== "Tab" || !trap) return;
+      const items = focusables(trap); if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !trap.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !trap.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    });
   }
 
   function updateNavMarker(container) {
@@ -279,6 +425,7 @@
       statusTargets: ["topStatus", "mobileStatus"],
       ...(options || {}),
     };
+    document.body.dataset.authenticated = String(!!settings.loggedIn);
     const loginCard = byId(settings.loginId);
     const panel = byId(settings.panelId);
 
@@ -335,7 +482,7 @@
     const settings = options || {};
     const currentPage = settings.page || document.body.dataset.adminPage || "";
     renderNav(currentPage);
-    animateEnter();
+    initWorkspace();
     if (settings.passwordHandler) {
       bindEnterSubmit(settings.passwordId || "pwd", settings.passwordHandler);
     }

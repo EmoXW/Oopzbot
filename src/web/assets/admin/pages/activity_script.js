@@ -75,9 +75,9 @@
         return;
       }
 
-      var gradient = ctx.getContext("2d").createLinearGradient(0, 0, 0, 260);
-      gradient.addColorStop(0, "rgba(59, 130, 246, 0.25)");
-      gradient.addColorStop(1, "rgba(59, 130, 246, 0.02)");
+      var theme = getComputedStyle(document.documentElement);
+      var chartColor = 'hsl(' + theme.getPropertyValue('--chart-1').trim() + ')';
+      var chartFill = 'hsl(' + theme.getPropertyValue('--chart-1').trim() + ' / .08)';
 
       dailyChartInstance = new Chart(ctx, {
         type: "line",
@@ -86,8 +86,8 @@
           datasets: [{
             label: "消息数",
             data: data,
-            borderColor: "#3b82f6",
-            backgroundColor: gradient,
+            borderColor: chartColor,
+            backgroundColor: chartFill,
             borderWidth: 2,
             pointRadius: 3,
             pointHoverRadius: 5,
@@ -103,13 +103,13 @@
           },
           scales: {
             x: {
-              grid: { color: "rgba(255,255,255,0.06)" },
-              ticks: { color: "#94a3b8", font: { size: 11 } },
+              grid: { color: theme.getPropertyValue('--line').trim() },
+              ticks: { color: theme.getPropertyValue('--ink-faint').trim(), font: { size: 11 } },
             },
             y: {
               beginAtZero: true,
-              grid: { color: "rgba(255,255,255,0.06)" },
-              ticks: { color: "#94a3b8", font: { size: 11 }, precision: 0 },
+              grid: { color: theme.getPropertyValue('--line').trim() },
+              ticks: { color: theme.getPropertyValue('--ink-faint').trim(), font: { size: 11 }, precision: 0 },
             },
           },
         },
@@ -211,12 +211,12 @@
           scales: {
             x: {
               beginAtZero: true,
-              grid: { color: "rgba(255,255,255,0.06)" },
-              ticks: { color: "#94a3b8", font: { size: 11 }, precision: 0 },
+              grid: { color: theme.getPropertyValue('--line').trim() },
+              ticks: { color: theme.getPropertyValue('--ink-faint').trim(), font: { size: 11 }, precision: 0 },
             },
             y: {
               grid: { display: false },
-              ticks: { color: "#94a3b8", font: { size: 11 } },
+              ticks: { color: theme.getPropertyValue('--ink-faint').trim(), font: { size: 11 } },
             },
           },
         },

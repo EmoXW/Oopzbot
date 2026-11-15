@@ -135,6 +135,7 @@
         if (!response.ok || !data.ok) throw new Error(data.error || "上传失败");
         AdminShell.showMessage("pluginUploadMsg", data.message);
         AdminShell.byId("pluginZip").value = "";
+        AdminShell.byId("pluginZip").dispatchEvent(new Event("change", { bubbles: true }));
         await loadPlugins();
       } catch (error) {
         AdminShell.showMessage("pluginUploadMsg", error.message, true);
