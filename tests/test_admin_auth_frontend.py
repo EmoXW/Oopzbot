@@ -31,7 +31,8 @@ let loginErrors = 0;
 let loads = 0;
 const context = {
   window: { addEventListener() {} },
-  document: { getElementById: id => elements.get(id) || null, addEventListener() {} },
+  // This boundary test covers authentication; workspace navigation is initialized in the browser.
+  document: { body: { dataset: { workspaceBound: '1' } }, getElementById: id => elements.get(id) || null, addEventListener() {} },
   requestAnimationFrame() {},
   fetch: async (url, options) => {
     if (url === '/admin/api/login') {
@@ -60,12 +61,14 @@ vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
   elements.get('pwd').value = scenario === 'bad_password' ? 'wrong' : 'test-password';
   await auth.login();
   if (scenario === 'bad_password') {
+    assert.equal(context.document.body.dataset.authenticated, 'false');
     assert.equal(elements.get('panel').classList.contains('hidden'), true);
     assert.equal(elements.get('loginCard').classList.contains('hidden'), false);
     assert.equal(elements.get('loginMsg').textContent, '密码错误');
     assert.equal(loginErrors, 1);
     assert.equal(loads, 0);
   } else {
+    assert.equal(context.document.body.dataset.authenticated, 'true');
     assert.equal(elements.get('panel').classList.contains('hidden'), false);
     assert.equal(elements.get('loginCard').classList.contains('hidden'), true);
     assert.equal(loggedOut, 1);
@@ -80,6 +83,7 @@ vm.runInNewContext(fs.readFileSync(process.argv[1], 'utf8'), context);
       authorized = false;
       await auth.check();
       assert.equal(elements.get('panel').classList.contains('hidden'), true);
+      assert.equal(context.document.body.dataset.authenticated, 'false');
       assert.equal(elements.get('loginCard').classList.contains('hidden'), false);
       assert.equal(loggedOut, 2);
     }
