@@ -189,6 +189,7 @@
         return;
       }
 
+      var theme = getComputedStyle(document.documentElement);
       rankingChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
