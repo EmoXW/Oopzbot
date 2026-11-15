@@ -15,9 +15,9 @@
   </script>
   <link rel="stylesheet" href="/admin-assets/admin-shell.css?v=24" />
   <link rel="stylesheet" href="/admin-assets/admin-theme.css?v=1" />
-  <link rel="stylesheet" href="/admin-assets/admin-dujiao.css?v=1" />
+  <link rel="stylesheet" href="/admin-assets/admin-dujiao.css?v=2" />
 </head>
-<body data-admin-page="$page_id" data-authenticated="false">
+<body data-admin-page="$page_id" data-authenticated="checking">
   <a class="skip-link" href="#mainContent">跳转到主要内容</a>
   <div class="shell-app">
     <button id="sidebarScrim" class="sidebar-scrim" type="button" data-shell-action="close-nav" aria-label="关闭导航" hidden></button>
@@ -49,6 +49,9 @@
           <div><h1>$brand_title</h1><p>$brand_copy</p></div>
           <div class="page-actions">$topbar_actions</div>
         </section>
+        <section id="authLoading" class="auth-stage" role="status" aria-live="polite">
+          <div class="auth-card"><p id="authLoadingMsg">正在恢复登录状态…</p><button id="authRetry" class="btn btn-ghost" type="button" data-action="retry-auth" hidden>重试连接</button></div>
+        </section>
         <section id="loginCard" class="auth-stage">
           <article class="auth-card">
             <span class="auth-eyebrow">OOPZ BOT ADMIN</span>
@@ -65,7 +68,7 @@ $page_content
       </main>
     </div>
   </div>
-  <script src="/admin-assets/admin-shell.js?v=18"></script>
+  <script src="/admin-assets/admin-shell.js?v=19"></script>
   <script>
 $page_script
   </script>

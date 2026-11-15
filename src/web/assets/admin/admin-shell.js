@@ -40,7 +40,9 @@
       const detail = Array.isArray(data.errors) && data.errors.length > 0
         ? data.errors.join(" | ")
         : "";
-      throw new Error(data.error || detail || ("HTTP " + response.status));
+      const error = new Error(data.error || detail || ("HTTP " + response.status));
+      error.status = response.status;
+      throw error;
     }
     return data;
   }
@@ -517,10 +519,17 @@
       try {
         await req(meUrl);
       } catch (error) {
-        setAuthState({ loggedIn: false, loggedOutText, statusTargets });
-        showMessage(loginMsgId, "");
-        if (settings.onLoggedOut) {
-          settings.onLoggedOut(error);
+        if (error.status === 401 || error.status === 403) {
+          setAuthState({ loggedIn: false, loggedOutText, statusTargets });
+          showMessage(loginMsgId, "");
+          if (settings.onLoggedOut) settings.onLoggedOut(error);
+        } else {
+          // A connection failure does not mean the existing session expired.
+          if (document.body.dataset.authenticated !== "true") document.body.dataset.authenticated = "error";
+          showMessage("authLoadingMsg", "暂时无法连接后台，请重试。", true);
+          const retry = byId("authRetry");
+          if (retry) retry.hidden = false;
+          statusTargets.forEach((target) => setStatus("连接失败，请重试", "error", target));
         }
         return;
       }
@@ -530,6 +539,12 @@
           await settings.onLogin();
         }
       } catch (error) {
+        if (error.status === 401 || error.status === 403) {
+          setAuthState({ loggedIn: false, loggedOutText, statusTargets });
+          showMessage(loginMsgId, "登录已过期，请重新登录。", true);
+          if (settings.onLoggedOut) settings.onLoggedOut(error);
+          return;
+        }
         statusTargets.forEach((target) => setStatus("页面加载失败：" + error.message, "error", target));
         if (settings.loadMsgId) {
           showMessage(settings.loadMsgId, error.message, true);
@@ -568,6 +583,7 @@
 
     window.login = login;
     window.logout = logout;
+    registerActions({ "retry-auth": () => check() });
     init({ page: settings.page, passwordId, passwordHandler: login });
     check();
     return { check, login, logout };
