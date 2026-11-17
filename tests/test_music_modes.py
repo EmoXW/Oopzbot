@@ -724,6 +724,31 @@ class MusicModeTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"error": "voice_unavailable"})
         self.handler.voice.join.assert_not_awaited()
 
+    async def test_leave_failure_becomes_join_error_and_clears_stale_channel(self) -> None:
+        self.handler._voice_lock = asyncio.Lock()
+        self.handler._voice_channel_id = "old"
+        self.handler._voice_channel_area = "area-1"
+        self.handler.voice = AsyncMock()
+        self.handler.voice.available = True
+        self.handler.voice.leave.side_effect = RuntimeError("browser recovery failed")
+        self.handler.names = Mock()
+        result = await self.handler._do_enter_voice("new", "area-2")
+        self.assertEqual(result, {"error": "browser recovery failed"})
+        self.assertIsNone(self.handler._voice_channel_id)
+        self.assertIsNone(self.handler._voice_channel_area)
+        self.handler.voice.join.assert_not_awaited()
+
+    async def test_dead_browser_reconnects_even_when_server_membership_remains(self) -> None:
+        self.handler.voice = Mock(available=True, connection_lost=True)
+        self.handler.sender = AsyncMock()
+        self.handler.sender.get_voice_channel_for_user.return_value = "voice-1"
+        self.handler._do_enter_voice = AsyncMock(return_value={"status": True})
+        self.handler._still_registered_in_voice = AsyncMock(return_value=True)
+        result = await self.handler._check_and_enter_voice_channel("user", "text", "area-1")
+        self.assertTrue(result)
+        self.handler._still_registered_in_voice.assert_not_awaited()
+        self.handler._do_enter_voice.assert_awaited_once_with("voice-1", "area-1", force_reconnect=True)
+
 
 if __name__ == "__main__":
     unittest.main()

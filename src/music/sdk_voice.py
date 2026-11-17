@@ -31,6 +31,15 @@ _WARMUP_WAIT_TIMEOUT = 60.0
 _NETEASE_REMOTE_AUDIO_SUFFIXES = ("music.126.net", "music.163.com")
 
 
+def _browser_connection_lost(exc: Exception) -> bool:
+    return type(exc).__name__ == "TargetClosedError" or any(
+        text in str(exc) for text in (
+            "Target page, context or browser has been closed",
+            "Browser has been closed",
+        )
+    )
+
+
 class SdkVoiceController:
     """以 SDK Voice 为后端，补充安全下载、预加载和播放状态。"""
 
@@ -80,6 +89,14 @@ class SdkVoiceController:
         return self._playing
 
     @property
+    def connection_lost(self) -> bool:
+        backend = self._voice.backend
+        page = getattr(backend, "_page", None)
+        browser = getattr(backend, "_browser", None)
+        return ((page is not None and page.is_closed() is True)
+                or (browser is not None and browser.is_connected() is False))
+
+    @property
     def agora_uid(self) -> str:
         sign = self._voice.current_sign
         return str(getattr(sign, "agora_sign_pid", "") or "")
@@ -94,18 +111,35 @@ class SdkVoiceController:
         rtc_uid: str | int | None = None,
     ):
         await self._await_warmup()
-        return await self._voice.join(
-            area=area,
-            channel=channel,
-            from_area=from_area,
-            from_channel=from_channel,
-            rtc_uid=rtc_uid,
-        )
+        kwargs = dict(area=area, channel=channel, from_area=from_area,
+                      from_channel=from_channel, rtc_uid=rtc_uid)
+        try:
+            return await self._voice.join(**kwargs)
+        except Exception as exc:
+            if not _browser_connection_lost(exc):
+                raise
+            await self._rebuild_browser()
+            # One bounded retry; SDK join rolls back failed Oopz membership first.
+            return await self._voice.join(**kwargs)
+
+    async def _rebuild_browser(self) -> None:
+        logger.warning("语音浏览器已断开，正在重建连接")
+        await self._voice.backend.close()
+        await self._voice.backend.start()
+        logger.info("语音浏览器已重建，将重新进入目标频道")
 
     async def leave(self) -> None:
         self._playing = False
         self._cancel_playback_watch()
-        await self._voice.leave()
+        try:
+            await self._voice.leave()
+        except Exception as exc:
+            if not _browser_connection_lost(exc):
+                raise
+            # SDK Voice.leave already clears the Oopz membership in its finally block.
+            # Replace the dead browser before the next join instead of replaying audio
+            # against a new browser that has never joined the RTC room.
+            await self._rebuild_browser()
 
     def preload_audio(self, url: str, *, headers: Mapping[str, str] | None = None) -> None:
         url = str(url or "").strip()

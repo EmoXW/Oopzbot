@@ -14,6 +14,40 @@ from oopz.sdk_transport import ProjectBrowserVoiceTransport  # noqa: E402
 
 
 class SdkVoiceControllerTest(unittest.IsolatedAsyncioTestCase):
+    async def test_closed_browser_during_leave_is_rebuilt(self) -> None:
+        self.voice.leave.side_effect = RuntimeError("Target page, context or browser has been closed")
+        self.voice.backend.close = AsyncMock()
+        self.voice.backend.start = AsyncMock()
+        await self.controller.leave()
+        self.voice.backend.close.assert_awaited_once()
+        self.voice.backend.start.assert_awaited_once()
+        self.assertFalse(self.controller.is_playing)
+
+    async def test_join_retries_closed_browser_only_once(self) -> None:
+        self.voice.join.side_effect = [
+            RuntimeError("Target page, context or browser has been closed"), {"ok": True},
+        ]
+        self.voice.backend.close = AsyncMock()
+        self.voice.backend.start = AsyncMock()
+        result = await self.controller.join(area="a", channel="c")
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(self.voice.join.await_count, 2)
+        self.voice.backend.start.assert_awaited_once()
+
+    async def test_unrelated_leave_failure_is_not_hidden(self) -> None:
+        self.voice.leave.side_effect = RuntimeError("permission denied")
+        with self.assertRaisesRegex(RuntimeError, "permission denied"):
+            await self.controller.leave()
+
+    async def test_repeated_browser_failure_stops_after_one_retry(self) -> None:
+        self.voice.join.side_effect = RuntimeError("Target page, context or browser has been closed")
+        self.voice.backend.close = AsyncMock()
+        self.voice.backend.start = AsyncMock()
+        with self.assertRaisesRegex(RuntimeError, "has been closed"):
+            await self.controller.join(area="a", channel="c")
+        self.assertEqual(self.voice.join.await_count, 2)
+        self.voice.backend.start.assert_awaited_once()
+
     def setUp(self) -> None:
         self.voice = Mock()
         self.voice.current_sign = Mock(agora_sign_pid="123")

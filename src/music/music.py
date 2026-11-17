@@ -334,7 +334,7 @@ class MusicHandler(PlaybackMixin):
     # 公共命令
     # ------------------------------------------------------------------
 
-    async def _do_enter_voice(self, voice_channel_id: str, area: str, *, only_if_idle: bool = False) -> dict:
+    async def _do_enter_voice(self, voice_channel_id: str, area: str, *, only_if_idle: bool = False, force_reconnect: bool = False) -> dict:
         """由 SDK Voice 完成 Oopz 进入、Agora 连接及失败回滚。"""
         if not self.voice or not self.voice.available:
             return {"error": "voice_unavailable"}
@@ -345,14 +345,16 @@ class MusicHandler(PlaybackMixin):
                 return {"status": False, "reason": "voice_channel_occupied"}
             from_channel = self._voice_channel_id or ""
             from_area = self._voice_channel_area or ""
-            if self._voice_channel_id and (
-                self._voice_channel_id != voice_channel_id
-                or self._voice_channel_area != area
-            ):
-                await self._leave_current_voice_channel()
-            if not self._voice_channel_id:
-                await self._cleanup_stale_voice_membership(area)
             try:
+                if self._voice_channel_id and (
+                    self._voice_channel_id != voice_channel_id
+                    or self._voice_channel_area != area
+                    or getattr(self.voice, "connection_lost", False) is True
+                    or force_reconnect
+                ):
+                    await self._leave_current_voice_channel()
+                if not self._voice_channel_id:
+                    await self._cleanup_stale_voice_membership(area)
                 sign = await self.voice.join(
                     area=area,
                     channel=voice_channel_id,
@@ -405,17 +407,24 @@ class MusicHandler(PlaybackMixin):
             return False
 
         if self._voice_channel_id == voice_ch_id and self._voice_channel_area == area:
-            if await self._still_registered_in_voice(voice_ch_id, area):
+            if (getattr(self.voice, "connection_lost", False) is not True
+                    and await self._still_registered_in_voice(voice_ch_id, area)):
                 return True
-            logger.info("服务端已不再把 bot 记为语音频道成员，重新进入")
-            await self._leave_current_voice_channel()
+            logger.info("语音连接或频道成员状态已失效，重新进入")
+            # Exit/recovery runs inside _do_enter_voice's lock and error boundary.
+            result = await self._do_enter_voice(voice_ch_id, area, force_reconnect=True)
+            if "error" in result:
+                await self.sender.send_message("语音连接恢复失败，请稍后重新点歌。", channel=channel, area=area)
+                return False
+            return True
         current_channel = self._voice_channel_id
         current_area = str(self._voice_channel_area or "").strip()
         if current_channel and (
             current_channel != voice_ch_id or current_area != area
         ):
             current_queue = self._get_queue(current_area) if current_area else None
-            if current_queue is None or await self._is_playing(queue=current_queue):
+            if (getattr(self.voice, "connection_lost", False) is not True
+                    and (current_queue is None or await self._is_playing(queue=current_queue))):
                 await self.sender.send_message(
                     f"Bot 正在 {self.names.channel(current_channel)} 播放中，请等播完或到该频道使用 /st 停止。",
                     channel=channel,
@@ -531,12 +540,13 @@ class MusicHandler(PlaybackMixin):
         self._playback_generation = getattr(self, "_playback_generation", 0) + 1
 
         # 先断开 Agora RTC 连接
-        if self.voice and self.voice.available:
-            await self.voice.leave()
-
-        logger.info("Bot 已退出语音频道: %s", self.names.channel(self._voice_channel_id))
-        self._voice_channel_id = None
-        self._voice_channel_area = None
+        try:
+            if self.voice and self.voice.available:
+                await self.voice.leave()
+        finally:
+            logger.info("Bot 已退出语音频道: %s", self.names.channel(self._voice_channel_id))
+            self._voice_channel_id = None
+            self._voice_channel_area = None
 
     async def play_netease(self, keyword: str, channel: str, area: str, user: str) -> None:
         """搜索网易云并播放或加入队列"""
