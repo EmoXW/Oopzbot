@@ -7,7 +7,7 @@ import asyncio
 import sys
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -31,13 +31,13 @@ class WaitNextCheckTest(unittest.IsolatedAsyncioTestCase):
         await waiter.auto_play_monitor(asyncio.Event())
         queue.get_current.assert_not_awaited()
         queue.clear_current.assert_not_awaited()
-        waiter._dequeue_next_song.assert_not_awaited()
+        cast(AsyncMock, waiter._dequeue_next_song).assert_not_awaited()
 
     async def test_natural_end_after_requested_playback_still_advances(self) -> None:
         waiter, queue = self._monitor_fixture(armed=True)
         await waiter.auto_play_monitor(asyncio.Event())
         queue.clear_current.assert_awaited_once()
-        waiter._dequeue_next_song.assert_awaited_once_with(
+        cast(AsyncMock, waiter._dequeue_next_song).assert_awaited_once_with(
             natural_end=True, current_song={"name": "previous song"}, queue=queue,
         )
 
