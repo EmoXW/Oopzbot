@@ -8,7 +8,7 @@ import sys
 import unittest
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -26,6 +26,39 @@ class _Waiter(PlaybackMixin):
 
 
 class WaitNextCheckTest(unittest.IsolatedAsyncioTestCase):
+    async def test_restart_standby_does_not_resume_persisted_song_or_queue(self) -> None:
+        waiter, queue = self._monitor_fixture(armed=False)
+        await waiter.auto_play_monitor(asyncio.Event())
+        queue.get_current.assert_not_awaited()
+        queue.clear_current.assert_not_awaited()
+        waiter._dequeue_next_song.assert_not_awaited()
+
+    async def test_natural_end_after_requested_playback_still_advances(self) -> None:
+        waiter, queue = self._monitor_fixture(armed=True)
+        await waiter.auto_play_monitor(asyncio.Event())
+        queue.clear_current.assert_awaited_once()
+        waiter._dequeue_next_song.assert_awaited_once_with(
+            natural_end=True, current_song={"name": "previous song"}, queue=queue,
+        )
+
+    def _monitor_fixture(self, *, armed):
+        waiter = _Waiter(Mock(spec=[]))
+        waiter._auto_play_armed = armed
+        waiter._playback_lock = asyncio.Lock()
+        waiter._resolve_background_area = Mock(return_value="area")
+        session = Mock(area=Mock(value="area"), channel="standby")
+        waiter._playback_snapshot_locked = Mock(return_value=session)
+        waiter._advance_playback_generation_locked = Mock(return_value=session)
+        queue = AsyncMock()
+        queue.get_current.return_value = {"name": "previous song"}
+        queue.get_queue_length.return_value = 2
+        waiter._get_queue = Mock(return_value=queue)
+        waiter._is_playing = AsyncMock(return_value=False)
+        waiter._dequeue_next_song = AsyncMock(return_value=(None, ""))
+        waiter._release_web_link_if_needed = AsyncMock()
+        waiter._wait_next_check = AsyncMock(return_value=True)
+        return waiter, queue
+
     def setUp(self) -> None:
         self.voice = Mock()
         self.voice.playback_ended = asyncio.Event()

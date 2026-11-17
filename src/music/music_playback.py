@@ -233,7 +233,7 @@ class PlaybackMixin:
                         queue = self._get_queue(area)
                         is_playing = await self._is_playing(queue=queue)
 
-                    if queue is not None and not is_playing:
+                    if queue is not None and not is_playing and getattr(self, "_auto_play_armed", False):
                         current = await queue.get_current()
                         finished_song = None
 
@@ -504,6 +504,7 @@ class PlaybackMixin:
 
     async def _start_playing(self, duration_ms: int, area: str | None = None):
         """记录播放开始时间和时长，同步到 Redis 供 Web 播放器读取"""
+        self._auto_play_armed = True
         self._play_start_time = time.time()
         self._play_duration = duration_ms / 1000 if duration_ms else _DEFAULT_PLAY_DURATION
         try:

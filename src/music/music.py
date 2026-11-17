@@ -136,6 +136,9 @@ class MusicHandler(PlaybackMixin):
         self._liked_cache: list = []
         self._liked_ids_cache: list = []
         self._play_start_time: float = 0
+        # Redis may contain a song/queue from the previous process. Joining the
+        # wake standby channel is not a request to resume that playback.
+        self._auto_play_armed = False
         self._play_duration: float = 0
         self._voice_channel_id: str | None = None
         self._voice_channel_area: str | None = None
@@ -918,6 +921,7 @@ class MusicHandler(PlaybackMixin):
                 return
             self._advance_playback_generation_locked()
             self._play_start_time = 0
+            self._auto_play_armed = False
             self._play_duration = 0
             q = self._get_queue(area)
             await q.clear_current()
@@ -1580,6 +1584,7 @@ class MusicHandler(PlaybackMixin):
                     "attachments": [],
                 }
             q = self._get_queue(area)
+            self._auto_play_armed = True
             await self._mark_web_active_area(area, queue=q)
             is_playing = await self._is_playing(queue=q)
             current_song = await q.get_current()
